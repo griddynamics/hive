@@ -148,8 +148,9 @@
 
   <macrodef name="iterate">
     <attribute name="target"/>
+    <attribute name="failonerror"/>
     <sequential>
-      <subant target="@{target}">
+      <subant target="@{target}" failonerror="@{failonerror}">
         <property name="build.dir.hive" location="${build.dir.hive}"/>
         <property name="is-offline" value="${is-offline}"/>
         <filelist dir="." files="shims/build.xml,common/build.xml,serde/build.xml,metastore/build.xml,ql/build.xml,contrib/build.xml,service/build.xml,cli/build.xml,jdbc/build.xml,hwi/build.xml,hbase-handler/build.xml,pdk/build.xml,builtins/build.xml"/>
@@ -287,7 +288,7 @@
 
   <target name="compile" depends="compile-cpp">
     <echo message="Project: ${ant.project.name}"/>
-    <iterate target="compile"/>
+    <iterate target="compile" failonerror="true"/>
   </target>
 
   <target name="thriftif">
@@ -299,7 +300,7 @@
           depends="init"
           description="Build JAR artifacts">
     <echo message="Project: ${ant.project.name}"/>
-    <iterate target="jar"/>
+    <iterate target="jar" failonerror="true"/>
   </target>
 
   <target name="jar-test" depends="jar"
@@ -335,6 +336,10 @@
     </subant>
   </target>
 
+  <target name="clover-reports"> 
+    <iterate target="gen-clover-report" failonerror="false"/>
+  </target>
+
   <!-- create an html report from junit output files -->
   <target name="testreport"
           description="Generate JUnit HTML test report">
@@ -351,7 +356,7 @@
   <target name="clean-test"
           description="Clean test results">
     <echo message="Project: ${ant.project.name}"/>
-    <iterate target="clean-test"/>
+    <iterate target="clean-test" failonerror="true"/>
     <delete dir="${build.dir.hive}/test"/>
     <delete dir="${hive.root}/ql/TempStatsStore"/>
   </target>
