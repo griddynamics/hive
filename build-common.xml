@@ -72,7 +72,7 @@
   <path id="test.classpath">
     <pathelement location="${test.build.classes}" />
     <pathelement location="${test.build.resources}" />
-    <pathelement location="" />
+    <pathelement location="${clover.jar}" />
     <pathelement location="${test.src.data.dir}/conf"/>
     <pathelement location="${hive.conf.dir}"/>
     <pathelement location="${build.dir.hive}/cli/test/classes"/>
@@ -107,6 +107,28 @@
     <istrue value="${is-offline}"/>
   </condition>
   <import file="build-offline.xml"/>
+
+  <condition property="clover.enabled">
+  <isset property="clover.jar"/>
+  </condition>
+ 
+  <target name="with.clover" if="clover.enabled">
+    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    <clover-setup initString="${build.dir}/clover/db/clover.db">
+      <fileset dir="src" includes="**/*.java"/> 
+    </clover-setup>
+  </target>
+
+ <target name="gen-clover-report" depends="with.clover">
+    <mkdir dir="${build.dir}/clover/report/html"/>
+      <clover-report>
+      <current outfile="${build.dir}/clover/report/html" title="${ant.project.name}">
+        <format type="html"/>
+      </current>
+      </clover-report>
+      <clover-pdf-report outfile="${build.dir}/clover/report/${ant.project.name}.pdf" title="${ant.project.name}">
+      </clover-pdf-report>
+ </target>
 
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.artifact.retrieve.pattern" value="[conf]/[artifact]-[revision](-[classifier]).[ext]"/>
@@ -175,6 +197,7 @@
   <!-- the normal classpath -->
   <path id="common-classpath">
     <pathelement location="${build.dir.hive}/classes"/>
+    <pathelement location="${clover.jar}" />
     <fileset dir="${build.dir.hive}" includes="*/*.jar"/>
     <fileset dir="${hive.root}/lib" includes="*.jar"/>
     <fileset dir="${build.ivy.lib.dir}/default" includes="*.jar" 
@@ -212,7 +235,7 @@
     </copy>
   </target>
 
-  <target name="init" depends="create-dirs">
+  <target name="init" depends="create-dirs, with.clover">
     <echo message="Project: ${ant.project.name}"/>
   </target>
 
@@ -388,7 +411,7 @@
       </then>
     </if>
     <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no"
-           fork="yes" maxmemory="512m" dir="${basedir}" timeout="${test.timeout}"
+           fork="true" maxmemory="512m" dir="${basedir}" timeout="${test.timeout}"
            errorProperty="tests.failed" failureProperty="tests.failed" filtertrace="off">
       <env key="LANG" value="${test.lang}"/>
       <env key="HIVE_HADOOP_TEST_CLASSPATH" value="${hadoop.testcp}"/>
