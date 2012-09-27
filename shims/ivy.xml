@@ -120,6 +120,8 @@
       <exclude org="org.apache.commons" module="commons-daemon"/><!--bad POM-->
     </dependency>
 
+    <exclude org="com.cenqua.clover" module="clover"/>
+
     <conflict manager="all" />
   </dependencies>
 </ivy-module>
