@@ -10,10 +10,14 @@ PREHOOK: query: drop table if exists sih_src2
 PREHOOK: type: DROPTABLE
 POSTHOOK: query: drop table if exists sih_src2
 POSTHOOK: type: DROPTABLE
-PREHOOK: query: -- create file inputs
+PREHOOK: query: -- EXCLUDE_HADOOP_MAJOR_VERSIONS(0.20)
+
+-- create file inputs
 create table sih_i_part (key int, value string) partitioned by (p string)
 PREHOOK: type: CREATETABLE
-POSTHOOK: query: -- create file inputs
+POSTHOOK: query: -- EXCLUDE_HADOOP_MAJOR_VERSIONS(0.20)
+
+-- create file inputs
 create table sih_i_part (key int, value string) partitioned by (p string)
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: default@sih_i_part
@@ -88,20 +92,20 @@ select count(1) from sih_src tablesample(1 percent)
 PREHOOK: type: QUERY
 PREHOOK: Input: default@sih_src
 #### A masked pattern was here ####
-1500
+25
 PREHOOK: query: -- sample two tables
 select count(1) from sih_src tablesample(1 percent)a join sih_src2 tablesample(1 percent)b on a.key = b.key
 PREHOOK: type: QUERY
 PREHOOK: Input: default@sih_src
 PREHOOK: Input: default@sih_src2
 #### A masked pattern was here ####
-3084
+49
 PREHOOK: query: -- sample split, running locally limited by max bytes
 select count(1) from sih_src tablesample(1 percent)
 PREHOOK: type: QUERY
 PREHOOK: Input: default@sih_src
 #### A masked pattern was here ####
-1500
+25
 PREHOOK: query: drop table sih_i_part
 PREHOOK: type: DROPTABLE
 PREHOOK: Input: default@sih_i_part

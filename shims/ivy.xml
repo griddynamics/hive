@@ -47,7 +47,8 @@
     <dependency org="org.apache.hadoop" name="hadoop-common"
                 rev="${hadoop-0.23.version}"
                 conf="hadoop0.23.shim->default">
-      <include type="jar"/>
+      <artifact name="hadoop-common" ext="jar" />
+      <artifact name="hadoop-common" type="tests" ext="jar" m:classifier="tests"/><!-- Needed by MinimrCluster -->
       <exclude org="commons-daemon" module="commons-daemon"/><!--bad POM-->
       <exclude org="org.apache.commons" module="commons-daemon"/><!--bad POM-->
     </dependency>
@@ -70,6 +71,44 @@
                 conf="hadoop0.23.shim->default">
       <artifact name="hadoop-hdfs" ext="jar" />
       <artifact name="hadoop-hdfs" type="tests" ext="jar" m:classifier="tests"/>
+      <exclude org="commons-daemon" module="commons-daemon"/><!--bad POM-->
+      <exclude org="org.apache.commons" module="commons-daemon"/><!--bad POM-->
+    </dependency>
+    <!-- Needed by LocalJobRunner -->
+    <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-common"
+                rev="${hadoop-0.23.version}"
+                conf="hadoop0.23.shim->default">
+      <include type="jar"/>
+      <exclude org="commons-daemon" module="commons-daemon"/><!--bad POM-->
+      <exclude org="org.apache.commons" module="commons-daemon"/><!--bad POM-->
+    </dependency>
+    <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-jobclient"
+                rev="${hadoop-0.23.version}"
+                conf="hadoop0.23.shim->default">
+      <artifact name="hadoop-mapreduce-client-jobclient" ext="jar" />
+      <artifact name="hadoop-mapreduce-client-jobclient" type="tests" ext="jar" m:classifier="tests"/>
+      <exclude org="commons-daemon" module="commons-daemon"/><!--bad POM-->
+      <exclude org="org.apache.commons" module="commons-daemon"/><!--bad POM-->
+    </dependency>
+    <!-- Needed by MinimrCluster -->
+    <dependency org="org.apache.hadoop" name="hadoop-yarn-server-tests"
+                rev="${hadoop-0.23.version}"
+                conf="hadoop0.23.shim->default">
+      <artifact name="hadoop-yarn-server-tests" type="tests" ext="jar" m:classifier="tests"/>
+      <exclude org="commons-daemon" module="commons-daemon"/><!--bad POM-->
+      <exclude org="org.apache.commons" module="commons-daemon"/><!--bad POM-->
+    </dependency>
+    <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-app"
+                rev="${hadoop-0.23.version}"
+                conf="hadoop0.23.shim->default">
+      <include type="jar"/>
+      <exclude org="commons-daemon" module="commons-daemon"/><!--bad POM-->
+      <exclude org="org.apache.commons" module="commons-daemon"/><!--bad POM-->
+    </dependency>
+    <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-hs"
+                rev="${hadoop-0.23.version}"
+                conf="hadoop0.23.shim->default">
+      <include type="jar"/>
       <exclude org="commons-daemon" module="commons-daemon"/><!--bad POM-->
       <exclude org="org.apache.commons" module="commons-daemon"/><!--bad POM-->
     </dependency>

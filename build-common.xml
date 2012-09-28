@@ -55,7 +55,7 @@
   <property name="test.include" value="Test*"/>
   <property name="test.classpath.id" value="test.classpath"/>
   <property name="test.output" value="true"/>
-  <property name="test.timeout" value="18200000"/>
+  <property name="test.timeout" value="36400000"/>
   <property name="test.junit.output.format" value="xml"/>
   <property name="test.junit.output.usefile" value="true"/>
   <property name="minimr.query.files" value="input16_cc.q,scriptfile1.q,bucket4.q,bucketmapjoin6.q,disable_merge_for_bucketing.q,reduce_deduplicate.q,smb_mapjoin_8.q,join1.q,groupby2.q,bucketizedhiveinputformat.q"/>
@@ -86,11 +86,16 @@
     <pathelement location="${build.dir.hive}/service/test/classes"/>
     <pathelement location="${build.dir.hive}/shims/test/classes"/>
 
-    <fileset dir="${hive.root}/build/ivy/lib/test" includes="*.jar" erroronmissingdir="false" excludes="**/hive_contrib*.jar,**/hive-contrib*.jar"/>
-    <fileset dir="${hive.root}/build/ivy/lib/default" includes="*.jar" erroronmissingdir="false" excludes="**/hive_contrib*.jar,**/hive-contrib*.jar" />
+    <fileset dir="${build.dir.hive}/dist/lib" includes="*.jar" erroronmissingdir="false" excludes="**/hive_contrib*.jar,**/hive-contrib*.jar,**/lib*.jar"/>
     <fileset dir="${hive.root}/testlibs" includes="*.jar"/>
-    <fileset dir="${hive.root}/build/ivy/lib/hadoop0.${hadoop.mr.rev}.shim" includes="*.jar" />
+    <fileset dir="${build.ivy.lib.dir}/hadoop0.${hadoop.mr.rev}.shim" includes="*.jar" erroronmissingdir="false" />
     <pathelement location="${build.classes}" />
+
+    <!-- we strip out hadoop jars present in places other than the hadoop shimmed dir-->
+    <fileset dir="${hive.root}/build/ivy/lib/test" includes="*.jar" erroronmissingdir="false"
+             excludes="**/hive_*.jar,**/hive-*.jar,**/hadoop-*.jar"/>
+    <fileset dir="${hive.root}/build/ivy/lib/default" includes="*.jar" erroronmissingdir="false"
+             excludes="**/hive_*.jar,**/hive-*.jar,**/hadoop-*.jar" />
   </path>
 
   <!-- include contrib on local classpath, but not on cluster -->
@@ -200,7 +205,9 @@
     <pathelement location="${clover.jar}" />
     <fileset dir="${build.dir.hive}" includes="*/*.jar"/>
     <fileset dir="${hive.root}/lib" includes="*.jar"/>
+    <fileset dir="${build.ivy.lib.dir}/hadoop0.${hadoop.mr.rev}.shim" includes="*.jar" erroronmissingdir="false" />
     <fileset dir="${build.ivy.lib.dir}/default" includes="*.jar" 
+             excludes="**/hadoop-*.jar"
              erroronmissingdir="false"/>
   </path>
 
@@ -323,6 +330,9 @@
       <compilerarg line="${javac.args} ${javac.args.warnings}" />
       <classpath refid="test.classpath"/>
     </javac>
+    <!-- Generate a classpath to have YARN use downloaded dependencies. -->
+    <property name="mrapp-classpath" refid="test.classpath" />
+    <echo file="${test.build.classes}/mrapp-generated-classpath" message="${mrapp-classpath}" />
   </target>
 
   <target name="test-jar" depends="compile-test">

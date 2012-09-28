@@ -3,6 +3,7 @@ set hive.auto.convert.join = true;
 
 CREATE TABLE dest1(c1 INT, c2 STRING) STORED AS TEXTFILE;
 
+set mapreduce.framework.name=yarn;
 set mapred.job.tracker=does.notexist.com:666;
 set hive.exec.mode.local.auto=true;
 
