@@ -340,7 +340,33 @@
     <iterate target="gen-clover-report" failonerror="false"/>
   </target>
 
-  <!-- create an html report from junit output files -->
+    <target name="clover-aggregate">
+        <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+        <clover-merge initString="hive-clover.db">
+            <cloverDbSet dir="${build.dir.hive}">
+                <include name="**/clover.db"/>
+            </cloverDbSet>
+        </clover-merge>
+        <mkdir dir="${build.dir}/clover/report/html"/>
+        <clover-report initstring="hive-clover.db">
+            <current outfile="clover/report/html" title="Hive">
+                <fileset dir="${basedir}">
+                    <include name="**/*.java"/>
+                    <exclude name="**/hive/metastore/api/**/*.java"/>
+                    <exclude name="**/hive/ql/plan/api/**/*.java"/>
+                    <exclude name="**/hive/serde2.dynamic_type/**/*.java"/>
+                    <exclude name="**/hive/serde2/dynamic_type/*.java"/>
+                    <exclude name="**/hive/service/*.java"/>
+                    <exclude name="**/hive/serde2/thrift/test/*.java"/>
+                    <exclude name="**/hive/serde/test/*.java"/>
+                </fileset>
+                <format type="html"/>
+            </current>
+        </clover-report>
+    </target>
+
+
+    <!-- create an html report from junit output files -->
   <target name="testreport"
           description="Generate JUnit HTML test report">
     <echo message="Project: ${ant.project.name}"/>
