@@ -359,6 +359,8 @@
                     <exclude name="**/hive/service/*.java"/>
                     <exclude name="**/hive/serde2/thrift/test/*.java"/>
                     <exclude name="**/hive/serde/test/*.java"/>
+                    <exclude name="**/hive/**/example/**/*.java"/>
+                    <exclude name="**/hive/serde2/thrift_test/*.java"/>
                 </fileset>
                 <format type="html"/>
             </current>
