@@ -361,6 +361,15 @@
                     <exclude name="**/hive/serde/test/*.java"/>
                     <exclude name="**/hive/**/example/**/*.java"/>
                     <exclude name="**/hive/serde2/thrift_test/*.java"/>
+                	
+                	<exclude name="**/hive/contrib/serde2/*.java"/>
+                	<exclude name="**/hive/contrib/serde2/s3/*.java"/>
+                	<exclude name="**/hive/contrib/util/typedbytes/*.java"/>
+                	<exclude name="**/hive/hwi/*.java"/>
+            		<exclude name="**/hive/jdbc/*.java"/>
+            		<exclude name="**/hive/scripts/*.java"/>
+                	<exclude name="**/hive/pdk/*.java"/>
+                	
                 </fileset>
                 <format type="html"/>
             </current>
