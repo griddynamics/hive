@@ -116,7 +116,7 @@
   <import file="build-offline.xml"/>
 
   <condition property="clover.enabled">
-  <isset property="clover.jar"/>
+    <isset property="clover.jar"/>
   </condition>
  
   <target name="with.clover" if="clover.enabled">
@@ -126,16 +126,16 @@
     </clover-setup>
   </target>
 
- <target name="gen-clover-report" depends="with.clover">
+  <target name="gen-clover-report" depends="with.clover">
     <mkdir dir="${build.dir}/clover/report/html"/>
-      <clover-report>
+    <clover-report>
       <current outfile="${build.dir}/clover/report/html" title="${ant.project.name}">
         <format type="html"/>
       </current>
-      </clover-report>
-      <clover-pdf-report outfile="${build.dir}/clover/report/${ant.project.name}.pdf" title="${ant.project.name}">
-      </clover-pdf-report>
- </target>
+    </clover-report>
+    <clover-pdf-report outfile="${build.dir}/clover/report/${ant.project.name}.pdf" title="${ant.project.name}">
+    </clover-pdf-report>
+  </target>
 
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.artifact.retrieve.pattern" value="[conf]/[artifact]-[revision](-[classifier]).[ext]"/>
