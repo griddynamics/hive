@@ -39,6 +39,7 @@
     <fileset dir="${build.ivy.lib.dir}/default" includes="commons-lang-*.jar"/>
     <fileset dir="${build.ivy.lib.dir}/default" includes="commons-logging-*.jar"/>
     <fileset dir="${build.ivy.lib.dir}/default" includes="hadoop-*.jar" />
+    <pathelement location="${clover.jar}" />
     <pathelement location="${build.classes}"/>
   </path>
 

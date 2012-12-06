@@ -48,6 +48,7 @@
      conf="docs->default"/>
    <dependency org="org.apache.maven" name="maven-ant-tasks" rev="${maven-ant-tasks.version}"
      conf="maven->default"/>
+   <exclude org="com.cenqua.clover" module="clover"/>
    <conflict manager="all" />
   </dependencies>
   
