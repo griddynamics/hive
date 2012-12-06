@@ -300,7 +300,7 @@
           depends="init"
           description="Build JAR artifacts">
     <echo message="Project: ${ant.project.name}"/>
-    <iterate target="jar"/>
+    <iterate target="jar" failonerror="true"/>
   </target>
 
   <target name="gen-test" depends="jar" description="Generate tests">
