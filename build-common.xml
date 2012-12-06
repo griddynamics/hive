@@ -121,19 +121,19 @@
  
   <target name="with.clover" if="clover.enabled">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
-    <clover-setup initString="${build.dir}/clover/db/clover.db">
+    <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
       <fileset dir="src" includes="**/*.java"/> 
     </clover-setup>
   </target>
 
   <target name="gen-clover-report" depends="with.clover">
-    <mkdir dir="${build.dir}/clover/report/html"/>
+    <mkdir dir="${build.dir.hive}/clover/report/html"/>
     <clover-report>
-      <current outfile="${build.dir}/clover/report/html" title="${ant.project.name}">
+      <current outfile="${build.dir.hive}/clover/report/html" title="${ant.project.name}">
         <format type="html"/>
       </current>
     </clover-report>
-    <clover-pdf-report outfile="${build.dir}/clover/report/${ant.project.name}.pdf" title="${ant.project.name}">
+    <clover-pdf-report outfile="${build.dir.hive}/clover/report/${ant.project.name}.pdf" title="${ant.project.name}">
     </clover-pdf-report>
   </target>
 
