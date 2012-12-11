@@ -64,6 +64,7 @@
   <property name="test.serialize.qplan" value="false"/>
   <property name="test.print.classpath" value="false"/>
   <property name="test.lang" value="en_US.UTF-8"/>
+  <property name="test.ignore.failures" value="false"/>
 
   <property name="hadoop.opts.23" value="-D mapreduce.framework.name=local" />
   <property name="hadoop.opts.20" value="" />
@@ -476,7 +477,14 @@
         <enable />
       </assertions>
     </junit>
-    <fail if="tests.failed">Tests failed!</fail>
+    <fail message="Tests failed!">
+        <condition>
+            <and>
+                <istrue value="${test.ignore.failures}"/>
+                <istrue value="${tests.failed}"/>
+            </and>
+        </condition>
+    </fail>
   </target>
 
   <target name="clean-test">
