@@ -343,6 +343,26 @@
   <target name="clover-reports">
       <iterate target="gen-clover-report" failonerror="false"/>
   </target>
+  
+  <fileset dir="${basedir}" id="clover.report.fileset">
+      <include name="**/*.java"/>
+      <exclude name="**/hive/metastore/api/**/*.java"/>
+      <exclude name="**/hive/ql/plan/api/**/*.java"/>
+      <exclude name="**/hive/serde2.dynamic_type/**/*.java"/>
+      <exclude name="**/hive/serde2/dynamic_type/*.java"/>
+      <exclude name="**/hive/service/*.java"/>
+      <exclude name="**/hive/serde2/thrift/test/*.java"/>
+      <exclude name="**/hive/serde/test/*.java"/>
+      <exclude name="**/hive/**/example/**/*.java"/>
+      <exclude name="**/hive/serde2/thrift_test/*.java"/>
+      <exclude name="**/hive/contrib/serde2/*.java"/>
+      <exclude name="**/hive/contrib/serde2/s3/*.java"/>
+      <exclude name="**/hive/contrib/util/typedbytes/*.java"/>
+      <exclude name="**/hive/hwi/*.java"/>
+      <exclude name="**/hive/jdbc/*.java"/>
+      <exclude name="**/hive/scripts/*.java"/>
+      <exclude name="**/hive/pdk/*.java"/>
+  </fileset>
 
   <target name="clover-aggregate">
       <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
@@ -354,26 +374,14 @@
       <mkdir dir="${build.dir.hive}/clover/report/html"/>
       <clover-report initstring="hive-clover.db">
           <current outfile="clover/report/html" title="Hive">
-              <fileset dir="${basedir}">
-                  <include name="**/*.java"/>
-                  <exclude name="**/hive/metastore/api/**/*.java"/>
-                  <exclude name="**/hive/ql/plan/api/**/*.java"/>
-                  <exclude name="**/hive/serde2.dynamic_type/**/*.java"/>
-                  <exclude name="**/hive/serde2/dynamic_type/*.java"/>
-                  <exclude name="**/hive/service/*.java"/>
-                  <exclude name="**/hive/serde2/thrift/test/*.java"/>
-                  <exclude name="**/hive/serde/test/*.java"/>
-                  <exclude name="**/hive/**/example/**/*.java"/>
-                  <exclude name="**/hive/serde2/thrift_test/*.java"/>
-                  <exclude name="**/hive/contrib/serde2/*.java"/>
-                  <exclude name="**/hive/contrib/serde2/s3/*.java"/>
-                  <exclude name="**/hive/contrib/util/typedbytes/*.java"/>
-                  <exclude name="**/hive/hwi/*.java"/>
-                  <exclude name="**/hive/jdbc/*.java"/>
-                  <exclude name="**/hive/scripts/*.java"/>
-                  <exclude name="**/hive/pdk/*.java"/>
-              </fileset>
+              <fileset refid="clover.report.fileset"/>
               <format type="html"/>
+          </current>
+      </clover-report>
+      <clover-report initstring="hive-clover.db">
+          <current outfile="clover/report/clover-report.xml" title="Hive">
+              <fileset refid="clover.report.fileset"/>
+              <format type="xml"/>
           </current>
       </clover-report>
   </target>
