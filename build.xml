@@ -377,12 +377,10 @@
               <fileset refid="clover.report.fileset"/>
               <format type="html"/>
           </current>
-      </clover-report>
-      <clover-report initstring="hive-clover.db">
-          <current outfile="clover/report/clover-report.xml" title="Hive">
+          <current outfile="clover/report/report.xml" title="Hive">
               <fileset refid="clover.report.fileset"/>
               <format type="xml"/>
-          </current>
+          </current>      
       </clover-report>
   </target>
 
