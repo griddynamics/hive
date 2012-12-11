@@ -480,7 +480,7 @@
     <fail message="Tests failed!">
         <condition>
             <and>
-                <istrue value="${test.ignore.failures}"/>
+                <isfalse value="${test.ignore.failures}"/>
                 <istrue value="${tests.failed}"/>
             </and>
         </condition>
