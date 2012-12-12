@@ -57,6 +57,7 @@
   <property name="checkstyle.build.dir" location="${build.dir.hive}/checkstyle"/>
   <property name="rat.build.dir" location="${build.dir.hive}/rat"/>
   <property name="md5sum.format" value="{0}  {1}"/>
+  <property name="test.ignore.failures" value="false"/>
 
   <!-- Ignore Postgres upgrade scripts unless 'include.postgres' is true -->
   <condition property="metastore.excludes"
@@ -320,13 +321,24 @@
     </antcall>
     <for keepgoing="${test.continue.on.failure}" param="file">
       <path>
-        <fileset dir="." includes="*/build.xml" excludes="ant/*,odbc/*,shims/*"/>
+        <fileset dir="." includes="service/build.xml" excludes="ant/*,odbc/*,shims/*"/>
       </path>
       <sequential>
-        <ant antfile="@{file}" target="test" inheritAll="false" inheritRefs="true">
-          <property name="build.dir.hive" location="${build.dir.hive}"/>
-          <property name="is-offline" value="${is-offline}"/>
-        </ant>
+        <trycatch property="failure.message">
+          <try>
+            <ant antfile="@{file}" target="test" inheritAll="false" inheritRefs="true">
+              <property name="build.dir.hive" location="${build.dir.hive}"/>
+              <property name="is-offline" value="${is-offline}"/>
+            </ant>
+          </try>
+          <catch>
+              <fail message="${failure.message}">
+                  <condition>
+                      <isfalse value="${test.ignore.failures}"/>
+                  </condition>
+              </fail>
+          </catch>
+        </trycatch>
       </sequential>
     </for>
   </target>
