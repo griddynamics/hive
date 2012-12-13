@@ -385,11 +385,11 @@
       </clover-merge>
       <mkdir dir="${build.dir.hive}/clover/report/html"/>
       <clover-report initstring="hive-clover.db">
-          <current outfile="clover/report/html" title="Hive">
+          <current outfile="${build.dir.hive}/clover/report/html" title="Hive">
               <fileset refid="clover.report.fileset"/>
               <format type="html"/>
           </current>
-          <current outfile="clover/report/report.xml" title="Hive">
+          <current outfile="${build.dir.hive}/clover/report/report.xml" title="Hive">
               <fileset refid="clover.report.fileset"/>
               <format type="xml"/>
           </current>      

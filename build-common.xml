@@ -135,8 +135,9 @@
 
   <target name="gen-clover-report" depends="with.clover">
       <mkdir dir="${build.dir.hive}/clover/report/html"/>
+      <mkdir dir="${build.dir.hive}/clover/report/html/${ant.project.name}"/>
       <clover-report>
-          <current outfile="${build.dir.hive}/clover/report/html" title="${ant.project.name}">
+          <current outfile="${build.dir.hive}/clover/report/${ant.project.name}/html" title="${ant.project.name}">
               <format type="html"/>
           </current>
       </clover-report>
