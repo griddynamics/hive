@@ -65,6 +65,7 @@
   <property name="test.serialize.qplan" value="false"/>
   <property name="test.print.classpath" value="false"/>
   <property name="test.lang" value="en_US.UTF-8"/>
+  <property name="test.ignore.failures" value="false"/>
 
   <property name="hadoop.opts.23" value="-D mapreduce.framework.name=local" />
   <property name="hadoop.opts.20" value="" />
@@ -128,8 +129,9 @@
 
   <target name="gen-clover-report" depends="with.clover">
     <mkdir dir="${build.dir}/clover/report/html"/>
+    <mkdir dir="${build.dir.hive}/clover/report/html/${ant.project.name}"/>
     <clover-report>
-      <current outfile="${build.dir}/clover/report/html" title="${ant.project.name}">
+      <current outfile="${build.dir}/clover/report/${ant.project.name}/html" title="${ant.project.name}">
         <format type="html"/>
       </current>
     </clover-report>
@@ -467,7 +469,14 @@
         <enable />
       </assertions>
     </junit>
-    <fail if="tests.failed">Tests failed!</fail>
+    <fail message="Tests failed!">
+        <condition>
+            <and>
+                <isfalse value="${test.ignore.failures}"/>
+                <istrue value="${tests.failed}"/>
+            </and>
+        </condition>
+    </fail>
   </target>
 
   <target name="clean-test">
