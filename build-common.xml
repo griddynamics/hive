@@ -454,6 +454,7 @@
       <sysproperty key="derby.version" value="${derby.version}"/>
       <sysproperty key="hive.version" value="${version}"/>
       <sysproperty key="hadoop.bin.path" value="${test.hadoop.bin.path}"/>
+      <sysproperty key="clover.jar" value="${clover.jar}"/>
 
       <classpath refid="test.local.classpath"/>
       <formatter type="${test.junit.output.format}" usefile="${test.junit.output.usefile}" />
