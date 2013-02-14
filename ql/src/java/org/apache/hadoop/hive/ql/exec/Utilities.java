@@ -120,8 +120,8 @@ import org.apache.hadoop.hive.ql.plan.MapredLocalWork;
 import org.apache.hadoop.hive.ql.plan.MapredWork;
 import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 import org.apache.hadoop.hive.ql.plan.PlanUtils;
-import org.apache.hadoop.hive.ql.plan.TableDesc;
 import org.apache.hadoop.hive.ql.plan.PlanUtils.ExpressionTypes;
+import org.apache.hadoop.hive.ql.plan.TableDesc;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.ql.stats.StatsFactory;
 import org.apache.hadoop.hive.ql.stats.StatsPublisher;
@@ -137,8 +137,8 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.FileOutputFormat;
@@ -559,30 +559,6 @@ public final class Utilities {
     }
   }
 
-  /**
-   * Tuple.
-   *
-   * @param <T>
-   * @param <V>
-   */
-  public static class Tuple<T, V> {
-    private final T one;
-    private final V two;
-
-    public Tuple(T one, V two) {
-      this.one = one;
-      this.two = two;
-    }
-
-    public T getOne() {
-      return this.one;
-    }
-
-    public V getTwo() {
-      return this.two;
-    }
-  }
-
   public static TableDesc defaultTd;
   static {
     // by default we expect ^A separated strings
@@ -693,7 +669,7 @@ public final class Utilities {
 
   public static TableDesc getTableDesc(Table tbl) {
     return (new TableDesc(tbl.getDeserializer().getClass(), tbl.getInputFormatClass(), tbl
-        .getOutputFormatClass(), tbl.getSchema()));
+        .getOutputFormatClass(), tbl.getMetadata()));
   }
 
   // column names and column types are all delimited by comma
@@ -1937,10 +1913,6 @@ public final class Utilities {
     }
   }
 
-  public static boolean supportCombineFileInputFormat() {
-    return ShimLoader.getHadoopShims().getCombineFileInputFormat() != null;
-  }
-
   /**
    * Construct a list of full partition spec from Dynamic Partition Context and the directory names
    * corresponding to these dynamic partitions.
@@ -2168,12 +2140,22 @@ public final class Utilities {
       if (!supportedJDOFuncs(func)) {
         return "Expression " + expr.getExprString() + " cannot be evaluated";
       }
+      boolean allChildrenConstant = true;
       List<ExprNodeDesc> children = funcDesc.getChildExprs();
       for (ExprNodeDesc child: children) {
+        if (!(child instanceof ExprNodeConstantDesc)) {
+          allChildrenConstant = false;
+        }
         String message = checkJDOPushDown(tab, child);
         if (message != null) {
           return message;
         }
+      }
+
+      // If all the children of the expression are constants then JDO cannot parse the expression
+      // see Filter.g
+      if (allChildrenConstant) {
+        return "Expression " + expr.getExprString() + " has only constants as children.";
       }
       return null;
     }

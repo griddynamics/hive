@@ -561,8 +561,8 @@ public class Driver implements CommandProcessor {
 
       Map<String, Boolean> tableUsePartLevelAuth = new HashMap<String, Boolean>();
       for (ReadEntity read : inputs) {
-        if (read.getPartition() != null) {
-          Table tbl = read.getTable();
+        Table tbl = read.getTable();
+        if ((read.getPartition() != null) || (tbl.isPartitioned())) {
           String tblName = tbl.getTableName();
           if (tableUsePartLevelAuth.get(tblName) == null) {
             boolean usePartLevelPriv = (tbl.getParameters().get(
@@ -636,34 +636,33 @@ public class Driver implements CommandProcessor {
         }
       }
 
-
-      //cache the results for table authorization
+      // cache the results for table authorization
       Set<String> tableAuthChecked = new HashSet<String>();
       for (ReadEntity read : inputs) {
-        Table tbl = null;
+        Table tbl = read.getTable();
         if (read.getPartition() != null) {
-          tbl = read.getPartition().getTable();
+          Partition partition = read.getPartition();
+          tbl = partition.getTable();
           // use partition level authorization
           if (tableUsePartLevelAuth.get(tbl.getTableName()) == Boolean.TRUE) {
-            List<String> cols = part2Cols.get(read.getPartition());
+            List<String> cols = part2Cols.get(partition);
             if (cols != null && cols.size() > 0) {
-              ss.getAuthorizer().authorize(read.getPartition().getTable(),
-                  read.getPartition(), cols, op.getInputRequiredPrivileges(),
+              ss.getAuthorizer().authorize(partition.getTable(),
+                  partition, cols, op.getInputRequiredPrivileges(),
                   null);
             } else {
-              ss.getAuthorizer().authorize(read.getPartition(),
+              ss.getAuthorizer().authorize(partition,
                   op.getInputRequiredPrivileges(), null);
             }
             continue;
           }
-        } else if (read.getTable() != null) {
-          tbl = read.getTable();
         }
 
         // if we reach here, it means it needs to do a table authorization
         // check, and the table authorization may already happened because of other
         // partitions
-        if (tbl != null && !tableAuthChecked.contains(tbl.getTableName())) {
+        if (tbl != null && !tableAuthChecked.contains(tbl.getTableName()) &&
+            !(tableUsePartLevelAuth.get(tbl.getTableName()) == Boolean.TRUE)) {
           List<String> cols = tab2Cols.get(tbl);
           if (cols != null && cols.size() > 0) {
             ss.getAuthorizer().authorize(tbl, null, cols,
@@ -786,15 +785,21 @@ public class Driver implements CommandProcessor {
       }
 
       for (WriteEntity output : plan.getOutputs()) {
+        List<HiveLockObj> lockObj = null;
         if (output.getTyp() == WriteEntity.Type.TABLE) {
-          lockObjects.addAll(getLockObjects(output.getTable(), null,
-              output.isComplete() ? HiveLockMode.EXCLUSIVE : HiveLockMode.SHARED));
+          lockObj = getLockObjects(output.getTable(), null,
+              output.isComplete() ? HiveLockMode.EXCLUSIVE : HiveLockMode.SHARED);
         } else if (output.getTyp() == WriteEntity.Type.PARTITION) {
-          lockObjects.addAll(getLockObjects(null, output.getPartition(), HiveLockMode.EXCLUSIVE));
+          lockObj = getLockObjects(null, output.getPartition(), HiveLockMode.EXCLUSIVE);
         }
         // In case of dynamic queries, it is possible to have incomplete dummy partitions
         else if (output.getTyp() == WriteEntity.Type.DUMMYPARTITION) {
-          lockObjects.addAll(getLockObjects(null, output.getPartition(), HiveLockMode.SHARED));
+          lockObj = getLockObjects(null, output.getPartition(), HiveLockMode.SHARED);
+        }
+
+        if(lockObj != null) {
+          lockObjects.addAll(lockObj);
+          ctx.getOutputLockObjects().put(output, lockObj);
         }
       }
 
@@ -1109,6 +1114,9 @@ public class Driver implements CommandProcessor {
 
       // Add root Tasks to runnable
       for (Task<? extends Serializable> tsk : plan.getRootTasks()) {
+        // This should never happen, if it does, it's a bug with the potential to produce
+        // incorrect results.
+        assert tsk.getParentTasks() == null || tsk.getParentTasks().isEmpty();
         driverCxt.addToRunnable(tsk);
       }
 

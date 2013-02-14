@@ -162,7 +162,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.srcpart
               numFiles 1
-              numPartitions 4
               numRows 0
               partition_columns ds/hr
               rawDataSize 0
@@ -379,6 +378,7 @@ WHERE z.ds='2008-04-08' and z.hr=11
 PREHOOK: type: QUERY
 PREHOOK: Input: default@src
 PREHOOK: Input: default@src1
+PREHOOK: Input: default@srcpart
 PREHOOK: Input: default@srcpart@ds=2008-04-08/hr=11
 PREHOOK: Output: default@dest_j1
 POSTHOOK: query: INSERT OVERWRITE TABLE dest_j1
@@ -389,6 +389,7 @@ WHERE z.ds='2008-04-08' and z.hr=11
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@src
 POSTHOOK: Input: default@src1
+POSTHOOK: Input: default@srcpart
 POSTHOOK: Input: default@srcpart@ds=2008-04-08/hr=11
 POSTHOOK: Output: default@dest_j1
 POSTHOOK: Lineage: dest_j1.key SIMPLE [(src1)x.FieldSchema(name:key, type:string, comment:default), ]
@@ -727,7 +728,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.srcpart
               numFiles 1
-              numPartitions 4
               numRows 0
               partition_columns ds/hr
               rawDataSize 0
@@ -979,6 +979,7 @@ WHERE z.ds='2008-04-08' and z.hr=11
 PREHOOK: type: QUERY
 PREHOOK: Input: default@src1_copy
 PREHOOK: Input: default@src_copy
+PREHOOK: Input: default@srcpart
 PREHOOK: Input: default@srcpart@ds=2008-04-08/hr=11
 PREHOOK: Output: default@dest_j1
 POSTHOOK: query: INSERT OVERWRITE TABLE dest_j1
@@ -989,6 +990,7 @@ WHERE z.ds='2008-04-08' and z.hr=11
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@src1_copy
 POSTHOOK: Input: default@src_copy
+POSTHOOK: Input: default@srcpart
 POSTHOOK: Input: default@srcpart@ds=2008-04-08/hr=11
 POSTHOOK: Output: default@dest_j1
 POSTHOOK: Lineage: dest_j1.key SIMPLE [(src1)x.FieldSchema(name:key, type:string, comment:default), ]

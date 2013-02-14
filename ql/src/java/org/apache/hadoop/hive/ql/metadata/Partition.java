@@ -214,7 +214,7 @@ public class Partition implements Serializable {
     getInputFormatClass();
     // This will set up field: outputFormatClass
     getOutputFormatClass();
-
+    getDeserializer();
   }
 
   public String getName() {
@@ -274,6 +274,10 @@ public class Partition implements Serializable {
 
   public Properties getSchema() {
     return MetaStoreUtils.getSchema(tPartition, table.getTTable());
+  }
+
+  public Properties getMetadataFromPartitionSchema() {
+    return MetaStoreUtils.getPartitionMetadata(tPartition, table.getTTable());
   }
 
   public Properties getSchemaFromTableSchema(Properties tblSchema) {
@@ -361,6 +365,10 @@ public class Partition implements Serializable {
      * throw new RuntimeException("Cannot get bucket count for table " +
      * this.table.getName(), e); } } return numBuckets;
      */
+  }
+
+  public void setBucketCount(int newBucketNum) {
+    tPartition.getSd().setNumBuckets(newBucketNum);
   }
 
   public List<String> getBucketCols() {

@@ -20,6 +20,8 @@ package org.apache.hadoop.hive.metastore;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -66,6 +68,8 @@ public class MetaStoreUtils {
 
   public static final String DEFAULT_DATABASE_NAME = "default";
   public static final String DEFAULT_DATABASE_COMMENT = "Default Hive database";
+
+  public static final String DATABASE_WAREHOUSE_SUFFIX = ".db";
 
   /**
    * printStackTrace
@@ -154,7 +158,9 @@ public class MetaStoreUtils {
    *          hadoop config
    * @param schema
    *          the properties to use to instantiate the deserializer
-   * @return the Deserializer
+   * @return
+   *   Returns instantiated deserializer by looking up class name of deserializer stored in passed
+   *   in properties. Also, initializes the deserializer with schema stored in passed in properties.
    * @exception MetaException
    *              if any problems instantiating the Deserializer
    *
@@ -186,7 +192,10 @@ public class MetaStoreUtils {
    *          - hadoop config
    * @param table
    *          the table
-   * @return the Deserializer
+   * @return
+   *   Returns instantiated deserializer by looking up class name of deserializer stored in
+   *   storage descriptor of passed in table. Also, initializes the deserializer with schema
+   *   of table.
    * @exception MetaException
    *              if any problems instantiating the Deserializer
    *
@@ -201,7 +210,7 @@ public class MetaStoreUtils {
     }
     try {
       Deserializer deserializer = SerDeUtils.lookupDeserializer(lib);
-      deserializer.initialize(conf, MetaStoreUtils.getSchema(table));
+      deserializer.initialize(conf, MetaStoreUtils.getTableMetadata(table));
       return deserializer;
     } catch (RuntimeException e) {
       throw e;
@@ -223,7 +232,10 @@ public class MetaStoreUtils {
    * @param part
    *          the partition
    * @param table the table
-   * @return the Deserializer
+   * @return
+   *   Returns instantiated deserializer by looking up class name of deserializer stored in
+   *   storage descriptor of passed in partition. Also, initializes the deserializer with
+   *   schema of partition.
    * @exception MetaException
    *              if any problems instantiating the Deserializer
    *
@@ -234,7 +246,7 @@ public class MetaStoreUtils {
     String lib = part.getSd().getSerdeInfo().getSerializationLib();
     try {
       Deserializer deserializer = SerDeUtils.lookupDeserializer(lib);
-      deserializer.initialize(conf, MetaStoreUtils.getSchema(part, table));
+      deserializer.initialize(conf, MetaStoreUtils.getPartitionMetadata(part, table));
       return deserializer;
     } catch (RuntimeException e) {
       throw e;
@@ -392,7 +404,7 @@ public class MetaStoreUtils {
         org.apache.hadoop.hive.serde.serdeConstants.STRING_TYPE_NAME, "string");
     typeToThriftTypeMap.put(
         org.apache.hadoop.hive.serde.serdeConstants.BINARY_TYPE_NAME, "binary");
-    // These 3 types are not supported yet.
+    // These 4 types are not supported yet.
     // We should define a complex type date in thrift that contains a single int
     // member, and DynamicSerDe
     // should convert it to date type at runtime.
@@ -403,6 +415,8 @@ public class MetaStoreUtils {
     typeToThriftTypeMap
         .put(org.apache.hadoop.hive.serde.serdeConstants.TIMESTAMP_TYPE_NAME,
             "timestamp");
+    typeToThriftTypeMap.put(
+        org.apache.hadoop.hive.serde.serdeConstants.DECIMAL_TYPE_NAME, "decimal");
   }
 
   /**
@@ -488,10 +502,19 @@ public class MetaStoreUtils {
     return ddl.toString();
   }
 
-  public static Properties getSchema(
+  public static Properties getTableMetadata(
       org.apache.hadoop.hive.metastore.api.Table table) {
     return MetaStoreUtils.getSchema(table.getSd(), table.getSd(), table
         .getParameters(), table.getDbName(), table.getTableName(), table.getPartitionKeys());
+  }
+
+  public static Properties getPartitionMetadata(
+      org.apache.hadoop.hive.metastore.api.Partition partition,
+      org.apache.hadoop.hive.metastore.api.Table table) {
+    return MetaStoreUtils
+        .getSchema(partition.getSd(), partition.getSd(), partition
+            .getParameters(), table.getDbName(), table.getTableName(),
+            table.getPartitionKeys());
   }
 
   public static Properties getSchema(
@@ -1026,9 +1049,12 @@ public class MetaStoreUtils {
             listenerImpl.trim(), true, JavaUtils.getClassLoader()).getConstructor(
                 Configuration.class).newInstance(conf);
         listeners.add(listener);
+      } catch (InvocationTargetException ie) {
+        throw new MetaException("Failed to instantiate listener named: "+
+            listenerImpl + ", reason: " + ie.getCause());
       } catch (Exception e) {
         throw new MetaException("Failed to instantiate listener named: "+
-            listenerImpl + e.toString());
+            listenerImpl + ", reason: " + e);
       }
     }
 
@@ -1043,4 +1069,37 @@ public class MetaStoreUtils {
       throw new MetaException(rawStoreClassName + " class not found");
     }
   }
+
+  /**
+   * Create an object of the given class.
+   * @param theClass
+   * @param parameterTypes
+   *          an array of parameterTypes for the constructor
+   * @param initargs
+   *          the list of arguments for the constructor
+   */
+  public static <T> T newInstance(Class<T> theClass, Class<?>[] parameterTypes,
+      Object[] initargs) {
+    // Perform some sanity checks on the arguments.
+    if (parameterTypes.length != initargs.length) {
+      throw new IllegalArgumentException(
+          "Number of constructor parameter types doesn't match number of arguments");
+    }
+    for (int i = 0; i < parameterTypes.length; i++) {
+      Class<?> clazz = parameterTypes[i];
+      if (!(clazz.isInstance(initargs[i]))) {
+        throw new IllegalArgumentException("Object : " + initargs[i]
+            + " is not an instance of " + clazz);
+      }
+    }
+
+    try {
+      Constructor<T> meth = theClass.getDeclaredConstructor(parameterTypes);
+      meth.setAccessible(true);
+      return meth.newInstance(initargs);
+    } catch (Exception e) {
+      throw new RuntimeException("Unable to instantiate " + theClass.getName(), e);
+    }
+  }
+
 }

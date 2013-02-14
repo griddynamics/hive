@@ -20,7 +20,6 @@ package org.apache.hadoop.hive.metastore;
 
 
 
-
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hive.cli.CliSessionState;
@@ -52,7 +51,7 @@ public class TestMetaStoreEndFunctionListener extends TestCase {
     MetaStoreUtils.startMetaStore(port, ShimLoader.getHadoopThriftAuthBridge());
     hiveConf = new HiveConf(this.getClass());
     hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, "thrift://localhost:" + port);
-    hiveConf.setIntVar(HiveConf.ConfVars.METASTORETHRIFTRETRIES, 3);
+    hiveConf.setIntVar(HiveConf.ConfVars.METASTORETHRIFTCONNECTIONRETRIES, 3);
     hiveConf.set(HiveConf.ConfVars.PREEXECHOOKS.varname, "");
     hiveConf.set(HiveConf.ConfVars.POSTEXECHOOKS.varname, "");
     hiveConf.set(HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY.varname, "false");
@@ -89,12 +88,13 @@ public class TestMetaStoreEndFunctionListener extends TestCase {
     Exception e = context.getException();
     assertTrue((e!=null));
     assertTrue((e instanceof NoSuchObjectException));
+    assertEquals(context.getInputTableName(), null);
 
     driver.run("use " + dbName);
     driver.run(String.format("create table %s (a string) partitioned by (b string)", tblName));
-
+    String tableName = "Unknown";
     try {
-      msc.getTable(dbName, "Unknown");
+      msc.getTable(dbName, tableName);
     }
     catch (Exception e1) {
     }
@@ -106,9 +106,10 @@ public class TestMetaStoreEndFunctionListener extends TestCase {
     e = context.getException();
     assertTrue((e!=null));
     assertTrue((e instanceof NoSuchObjectException));
+    assertEquals(context.getInputTableName(), tableName);
 
     try {
-      msc.getPartition("tmpdb", "tmptbl", "b=2012");
+      msc.getPartition("tmpdb", tblName, "b=2012");
     }
     catch (Exception e2) {
     }
@@ -120,7 +121,7 @@ public class TestMetaStoreEndFunctionListener extends TestCase {
     e = context.getException();
     assertTrue((e!=null));
     assertTrue((e instanceof NoSuchObjectException));
-
+    assertEquals(context.getInputTableName(), tblName);
     try {
       driver.run("drop table Unknown");
     }
@@ -134,6 +135,7 @@ public class TestMetaStoreEndFunctionListener extends TestCase {
     e = context.getException();
     assertTrue((e!=null));
     assertTrue((e instanceof NoSuchObjectException));
+    assertEquals(context.getInputTableName(), "Unknown");
 
   }
 

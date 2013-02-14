@@ -1,9 +1,9 @@
 /**
-   Licensed to the Apache Software Foundation (ASF) under one or more
-   contributor license agreements.  See the NOTICE file distributed with
+   Licensed to the Apache Software Foundation (ASF) under one or more 
+   contributor license agreements.  See the NOTICE file distributed with 
    this work for additional information regarding copyright ownership.
    The ASF licenses this file to You under the Apache License, Version 2.0
-   (the "License"); you may not use this file except in compliance with
+   (the "License"); you may not use this file except in compliance with 
    the License.  You may obtain a copy of the License at
 
        http://www.apache.org/licenses/LICENSE-2.0
@@ -108,6 +108,7 @@ TOK_DATETIME;
 TOK_TIMESTAMP;
 TOK_STRING;
 TOK_BINARY;
+TOK_DECIMAL;
 TOK_LIST;
 TOK_STRUCT;
 TOK_MAP;
@@ -115,10 +116,12 @@ TOK_UNIONTYPE;
 TOK_COLTYPELIST;
 TOK_CREATEDATABASE;
 TOK_CREATETABLE;
+TOK_TRUNCATETABLE;
 TOK_CREATEINDEX;
 TOK_CREATEINDEX_INDEXTBLNAME;
 TOK_DEFERRED_REBUILDINDEX;
 TOK_DROPINDEX;
+TOK_DROPTABLE_PROPERTIES;
 TOK_LIKETABLE;
 TOK_DESCTABLE;
 TOK_DESCFUNCTION;
@@ -181,11 +184,16 @@ TOK_READONLY;
 TOK_NO_DROP;
 TOK_STORAGEHANDLER;
 TOK_ALTERTABLE_CLUSTER_SORT;
+TOK_NOT_CLUSTERED;
+TOK_NOT_SORTED;
 TOK_TABCOLNAME;
 TOK_TABLELOCATION;
 TOK_PARTITIONLOCATION;
 TOK_TABLEBUCKETSAMPLE;
 TOK_TABLESPLITSAMPLE;
+TOK_PERCENT;
+TOK_LENGTH;
+TOK_ROWCOUNT;
 TOK_TMP_FILE;
 TOK_TABSORTCOLNAMEASC;
 TOK_TABSORTCOLNAMEDESC;
@@ -195,7 +203,9 @@ TOK_CREATEFUNCTION;
 TOK_DROPFUNCTION;
 TOK_CREATEVIEW;
 TOK_DROPVIEW;
+TOK_ALTERVIEW_AS;
 TOK_ALTERVIEW_PROPERTIES;
+TOK_DROPVIEW_PROPERTIES;
 TOK_ALTERVIEW_ADDPARTS;
 TOK_ALTERVIEW_DROPPARTS;
 TOK_ALTERVIEW_RENAME;
@@ -274,6 +284,7 @@ TOK_SKEWED_LOCATIONS;
 TOK_SKEWED_LOCATION_LIST;
 TOK_SKEWED_LOCATION_MAP;
 TOK_STOREDASDIRS;
+TOK_IGNOREPROTECTION;
 }
 
 
@@ -347,6 +358,7 @@ ddlStatement
     | dropDatabaseStatement
     | createTableStatement
     | dropTableStatement
+    | truncateTableStatement
     | alterStatement
     | descStatement
     | showStatement
@@ -407,6 +419,12 @@ orReplace
     -> ^(TOK_ORREPLACE)
     ;
 
+ignoreProtection
+@init { msgs.push("ignore protection clause"); }
+@after { msgs.pop(); }
+        : KW_IGNORE KW_PROTECTION
+        -> ^(TOK_IGNOREPROTECTION)
+        ;
 
 createDatabaseStatement
 @init { msgs.push("create database statement"); }
@@ -469,6 +487,7 @@ createTableStatement
     : KW_CREATE (ext=KW_EXTERNAL)? KW_TABLE ifNotExists? name=tableName
       (  like=KW_LIKE likeName=tableName
          tableLocation?
+         tablePropertiesPrefixed?
        | (LPAREN columnNameTypeList RPAREN)?
          tableComment?
          tablePartition?
@@ -494,6 +513,11 @@ createTableStatement
          selectStatement?
         )
     ;
+
+truncateTableStatement
+@init { msgs.push("truncate table statement"); }
+@after { msgs.pop(); }
+    : KW_TRUNCATE KW_TABLE tablePartitionPrefix -> ^(TOK_TRUNCATETABLE tablePartitionPrefix);
 
 createIndexStatement
 @init { msgs.push("create index statement");}
@@ -603,7 +627,6 @@ alterTableStatementSuffix
     | alterStatementSuffixUnArchive
     | alterStatementSuffixProperties
     | alterTblPartitionStatement
-    | alterStatementSuffixClusterbySortby
     | alterStatementSuffixSkewedby
     ;
 
@@ -617,6 +640,8 @@ alterViewStatementSuffix
         -> ^(TOK_ALTERVIEW_ADDPARTS alterStatementSuffixAddPartitions)
     | alterStatementSuffixDropPartitions
         -> ^(TOK_ALTERVIEW_DROPPARTS alterStatementSuffixDropPartitions)
+    | name=tableName KW_AS selectStatement
+        -> ^(TOK_ALTERVIEW_AS $name selectStatement)
     ;
 
 alterIndexStatementSuffix
@@ -714,8 +739,8 @@ partitionLocation
 alterStatementSuffixDropPartitions
 @init { msgs.push("drop partition statement"); }
 @after { msgs.pop(); }
-    : Identifier KW_DROP ifExists? dropPartitionSpec (COMMA dropPartitionSpec)*
-    -> ^(TOK_ALTERTABLE_DROPPARTS Identifier dropPartitionSpec+ ifExists?)
+    : Identifier KW_DROP ifExists? dropPartitionSpec (COMMA dropPartitionSpec)* ignoreProtection?
+    -> ^(TOK_ALTERTABLE_DROPPARTS Identifier dropPartitionSpec+ ifExists? ignoreProtection?)
     ;
 
 alterStatementSuffixProperties
@@ -723,6 +748,8 @@ alterStatementSuffixProperties
 @after { msgs.pop(); }
     : name=Identifier KW_SET KW_TBLPROPERTIES tableProperties
     -> ^(TOK_ALTERTABLE_PROPERTIES $name tableProperties)
+    | name=Identifier KW_UNSET KW_TBLPROPERTIES ifExists? tableProperties
+    -> ^(TOK_DROPTABLE_PROPERTIES $name tableProperties ifExists?)
     ;
 
 alterViewSuffixProperties
@@ -730,6 +757,8 @@ alterViewSuffixProperties
 @after { msgs.pop(); }
     : name=Identifier KW_SET KW_TBLPROPERTIES tableProperties
     -> ^(TOK_ALTERVIEW_PROPERTIES $name tableProperties)
+    | name=Identifier KW_UNSET KW_TBLPROPERTIES ifExists? tableProperties
+    -> ^(TOK_DROPVIEW_PROPERTIES $name tableProperties ifExists?)
     ;
 
 alterStatementSuffixSerdeProperties
@@ -764,7 +793,9 @@ alterTblPartitionStatementSuffix
   | alterStatementSuffixMergeFiles
   | alterStatementSuffixSerdeProperties
   | alterStatementSuffixRenamePart
+  | alterStatementSuffixBucketNum
   | alterTblPartitionStatementSuffixSkewedLocation
+  | alterStatementSuffixClusterbySortby
   ;
 
 alterStatementSuffixFileFormat
@@ -773,6 +804,14 @@ alterStatementSuffixFileFormat
 	: KW_SET KW_FILEFORMAT fileFormat
 	-> ^(TOK_ALTERTABLE_FILEFORMAT fileFormat)
 	;
+
+alterStatementSuffixClusterbySortby
+@init {msgs.push("alter partition cluster by sort by statement");}
+@after {msgs.pop();}
+  : KW_NOT KW_CLUSTERED -> ^(TOK_ALTERTABLE_CLUSTER_SORT TOK_NOT_CLUSTERED)
+  | KW_NOT KW_SORTED -> ^(TOK_ALTERTABLE_CLUSTER_SORT TOK_NOT_SORTED)
+  | tableBuckets -> ^(TOK_ALTERTABLE_CLUSTER_SORT tableBuckets)
+  ;
 
 alterTblPartitionStatementSuffixSkewedLocation
 @init {msgs.push("alter partition skewed location");}
@@ -859,16 +898,12 @@ alterProtectModeMode
     | KW_READONLY  -> ^(TOK_READONLY)
     ;
 
-
-alterStatementSuffixClusterbySortby
-@init {msgs.push("alter cluster by sort by statement");}
-@after{msgs.pop();}
-	:name=Identifier tableBuckets
-	->^(TOK_ALTERTABLE_CLUSTER_SORT $name tableBuckets)
-	|
-	name=Identifier KW_NOT KW_CLUSTERED
-	->^(TOK_ALTERTABLE_CLUSTER_SORT $name)
-	;
+alterStatementSuffixBucketNum
+@init { msgs.push(""); }
+@after { msgs.pop(); }
+    : KW_INTO num=Number KW_BUCKETS
+    -> ^(TOK_TABLEBUCKETS $num)
+    ;
 
 fileFormat
 @init { msgs.push("file format specification"); }
@@ -910,7 +945,7 @@ descPartTypeExpr
 descStatement
 @init { msgs.push("describe statement"); }
 @after { msgs.pop(); }
-    : (KW_DESCRIBE|KW_DESC) (descOptions=KW_FORMATTED|descOptions=KW_EXTENDED)? (parttype=descPartTypeExpr) -> ^(TOK_DESCTABLE $parttype $descOptions?)
+    : (KW_DESCRIBE|KW_DESC) (descOptions=KW_FORMATTED|descOptions=KW_EXTENDED|descOptions=KW_PRETTY)? (parttype=descPartTypeExpr) -> ^(TOK_DESCTABLE $parttype $descOptions?)
     | (KW_DESCRIBE|KW_DESC) KW_FUNCTION KW_EXTENDED? (name=descFuncNames) -> ^(TOK_DESCFUNCTION $name KW_EXTENDED?)
     | (KW_DESCRIBE|KW_DESC) KW_DATABASE KW_EXTENDED? (dbName=Identifier) -> ^(TOK_DESCDATABASE $dbName KW_EXTENDED?)
     ;
@@ -918,7 +953,7 @@ descStatement
 analyzeStatement
 @init { msgs.push("analyze statement"); }
 @after { msgs.pop(); }
-    : KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS (KW_FOR KW_COLUMNS statsColumnName=columnNameList)? -> ^(TOK_ANALYZE $parttype $statsColumnName?)
+    : KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $statsColumnName?)
     ;
 
 showStatement
@@ -1236,6 +1271,8 @@ tablePropertiesList
 @after { msgs.pop(); }
     :
       keyValueProperty (COMMA keyValueProperty)* -> ^(TOK_TABLEPROPLIST keyValueProperty+)
+    |
+      keyProperty (COMMA keyProperty)* -> ^(TOK_TABLEPROPLIST keyProperty+)
     ;
 
 keyValueProperty
@@ -1243,6 +1280,13 @@ keyValueProperty
 @after { msgs.pop(); }
     :
       key=StringLiteral EQUAL value=StringLiteral -> ^(TOK_TABLEPROPERTY $key $value)
+    ;
+
+keyProperty
+@init { msgs.push("specifying key property"); }
+@after { msgs.pop(); }
+    :
+      key=StringLiteral -> ^(TOK_TABLEPROPERTY $key TOK_NULL)
     ;
 
 tableRowFormatFieldIdentifier
@@ -1453,6 +1497,7 @@ primitiveType
     | KW_TIMESTAMP     ->    TOK_TIMESTAMP
     | KW_STRING        ->    TOK_STRING
     | KW_BINARY        ->    TOK_BINARY
+    | KW_DECIMAL       ->    TOK_DECIMAL
     ;
 
 listType
@@ -1568,7 +1613,7 @@ insertClause
    :
      KW_INSERT KW_OVERWRITE destination ifNotExists? -> ^(TOK_DESTINATION destination ifNotExists?)
    | KW_INSERT KW_INTO KW_TABLE tableOrPartition
-       -> ^(TOK_INSERT_INTO ^(tableOrPartition))
+       -> ^(TOK_INSERT_INTO tableOrPartition)
    ;
 
 destination
@@ -1577,7 +1622,7 @@ destination
    :
      KW_LOCAL KW_DIRECTORY StringLiteral -> ^(TOK_LOCAL_DIR StringLiteral)
    | KW_DIRECTORY StringLiteral -> ^(TOK_DIR StringLiteral)
-   | KW_TABLE tableOrPartition -> ^(tableOrPartition)
+   | KW_TABLE tableOrPartition -> tableOrPartition
    ;
 
 limitClause
@@ -1810,7 +1855,12 @@ splitSample
 @init { msgs.push("table split sample specification"); }
 @after { msgs.pop(); }
     :
-    KW_TABLESAMPLE LPAREN  (numerator=Number) KW_PERCENT RPAREN -> ^(TOK_TABLESPLITSAMPLE $numerator)
+    KW_TABLESAMPLE LPAREN  (numerator=Number) (percent=KW_PERCENT|KW_ROWS) RPAREN
+    -> {percent != null}? ^(TOK_TABLESPLITSAMPLE TOK_PERCENT $numerator)
+    -> ^(TOK_TABLESPLITSAMPLE TOK_ROWCOUNT $numerator)
+    |
+    KW_TABLESAMPLE LPAREN  (numerator=ByteLengthLiteral) RPAREN
+    -> ^(TOK_TABLESPLITSAMPLE TOK_LENGTH $numerator)
     ;
 
 tableSample
@@ -1831,8 +1881,12 @@ tableSource
 tableName
 @init { msgs.push("table name"); }
 @after { msgs.pop(); }
-    : (db=Identifier DOT)? tab=Identifier
-    -> ^(TOK_TABNAME $db? $tab)
+    :
+    db=Identifier DOT tab=Identifier
+    -> ^(TOK_TABNAME $db $tab)
+    |
+    tab=Identifier
+    -> ^(TOK_TABNAME $tab)
     ;
 
 viewName
@@ -2398,6 +2452,8 @@ KW_AFTER: 'AFTER';
 KW_DESCRIBE: 'DESCRIBE';
 KW_DROP: 'DROP';
 KW_RENAME: 'RENAME';
+KW_IGNORE: 'IGNORE';
+KW_PROTECTION: 'PROTECTION';
 KW_TO: 'TO';
 KW_COMMENT: 'COMMENT';
 KW_BOOLEAN: 'BOOLEAN';
@@ -2410,6 +2466,7 @@ KW_DOUBLE: 'DOUBLE';
 KW_DATE: 'DATE';
 KW_DATETIME: 'DATETIME';
 KW_TIMESTAMP: 'TIMESTAMP';
+KW_DECIMAL: 'DECIMAL';
 KW_STRING: 'STRING';
 KW_ARRAY: 'ARRAY';
 KW_STRUCT: 'STRUCT';
@@ -2422,6 +2479,7 @@ KW_SORTED: 'SORTED';
 KW_INTO: 'INTO';
 KW_BUCKETS: 'BUCKETS';
 KW_ROW: 'ROW';
+KW_ROWS: 'ROWS';
 KW_FORMAT: 'FORMAT';
 KW_DELIMITED: 'DELIMITED';
 KW_FIELDS: 'FIELDS';
@@ -2462,6 +2520,7 @@ KW_FUNCTION: 'FUNCTION';
 KW_EXPLAIN: 'EXPLAIN';
 KW_EXTENDED: 'EXTENDED';
 KW_FORMATTED: 'FORMATTED';
+KW_PRETTY: 'PRETTY';
 KW_DEPENDENCY: 'DEPENDENCY';
 KW_SERDE: 'SERDE';
 KW_WITH: 'WITH';
@@ -2470,6 +2529,7 @@ KW_SERDEPROPERTIES: 'SERDEPROPERTIES';
 KW_DBPROPERTIES: 'DBPROPERTIES';
 KW_LIMIT: 'LIMIT';
 KW_SET: 'SET';
+KW_UNSET: 'UNSET';
 KW_TBLPROPERTIES: 'TBLPROPERTIES';
 KW_IDXPROPERTIES: 'IDXPROPERTIES';
 KW_VALUE_TYPE: '$VALUE$';
@@ -2546,6 +2606,8 @@ KW_DIRECTORIES: 'DIRECTORIES';
 KW_FOR: 'FOR';
 KW_GROUPING: 'GROUPING';
 KW_SETS: 'SETS';
+KW_TRUNCATE: 'TRUNCATE';
+KW_NOSCAN: 'NOSCAN';
 
 // Operators
 // NOTE: if you add a new function/operator, add it to sysFuncNames so that describe function _FUNC_ will work.
@@ -2641,6 +2703,11 @@ SmallintLiteral
 TinyintLiteral
     :
     (Digit)+ 'Y'
+    ;
+
+ByteLengthLiteral
+    :
+    (Digit)+ ('b' | 'B' | 'k' | 'K' | 'm' | 'M' | 'g' | 'G')
     ;
 
 Number

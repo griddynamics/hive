@@ -66,7 +66,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.srcpart
               numFiles 1
-              numPartitions 4
               numRows 0
               partition_columns ds/hr
               rawDataSize 0
@@ -113,7 +112,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.srcpart
               numFiles 1
-              numPartitions 4
               numRows 0
               partition_columns ds/hr
               rawDataSize 0
@@ -175,11 +173,13 @@ STAGE PLANS:
 
 PREHOOK: query: select * from srcpart a where a.ds='2008-04-08' order by a.key, a.hr
 PREHOOK: type: QUERY
+PREHOOK: Input: default@srcpart
 PREHOOK: Input: default@srcpart@ds=2008-04-08/hr=11
 PREHOOK: Input: default@srcpart@ds=2008-04-08/hr=12
 #### A masked pattern was here ####
 POSTHOOK: query: select * from srcpart a where a.ds='2008-04-08' order by a.key, a.hr
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@srcpart
 POSTHOOK: Input: default@srcpart@ds=2008-04-08/hr=11
 POSTHOOK: Input: default@srcpart@ds=2008-04-08/hr=12
 #### A masked pattern was here ####
@@ -1256,7 +1256,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.srcpart
               numFiles 1
-              numPartitions 4
               numRows 0
               partition_columns ds/hr
               rawDataSize 0
@@ -1303,7 +1302,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.srcpart
               numFiles 1
-              numPartitions 4
               numRows 0
               partition_columns ds/hr
               rawDataSize 0
@@ -1365,11 +1363,13 @@ STAGE PLANS:
 
 PREHOOK: query: select * from srcpart a where a.ds='2008-04-08' and key < 200 order by a.key, a.hr
 PREHOOK: type: QUERY
+PREHOOK: Input: default@srcpart
 PREHOOK: Input: default@srcpart@ds=2008-04-08/hr=11
 PREHOOK: Input: default@srcpart@ds=2008-04-08/hr=12
 #### A masked pattern was here ####
 POSTHOOK: query: select * from srcpart a where a.ds='2008-04-08' and key < 200 order by a.key, a.hr
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@srcpart
 POSTHOOK: Input: default@srcpart@ds=2008-04-08/hr=11
 POSTHOOK: Input: default@srcpart@ds=2008-04-08/hr=12
 #### A masked pattern was here ####
@@ -1824,7 +1824,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.srcpart
               numFiles 1
-              numPartitions 4
               numRows 0
               partition_columns ds/hr
               rawDataSize 0
@@ -1871,7 +1870,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.srcpart
               numFiles 1
-              numPartitions 4
               numRows 0
               partition_columns ds/hr
               rawDataSize 0
@@ -1933,11 +1931,13 @@ STAGE PLANS:
 
 PREHOOK: query: select * from srcpart a where a.ds='2008-04-08' and rand(100) < 0.1 order by a.key, a.hr
 PREHOOK: type: QUERY
+PREHOOK: Input: default@srcpart
 PREHOOK: Input: default@srcpart@ds=2008-04-08/hr=11
 PREHOOK: Input: default@srcpart@ds=2008-04-08/hr=12
 #### A masked pattern was here ####
 POSTHOOK: query: select * from srcpart a where a.ds='2008-04-08' and rand(100) < 0.1 order by a.key, a.hr
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@srcpart
 POSTHOOK: Input: default@srcpart@ds=2008-04-08/hr=11
 POSTHOOK: Input: default@srcpart@ds=2008-04-08/hr=12
 #### A masked pattern was here ####

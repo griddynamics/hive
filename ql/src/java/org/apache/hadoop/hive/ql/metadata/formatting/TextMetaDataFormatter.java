@@ -54,6 +54,15 @@ public class TextMetaDataFormatter implements MetaDataFormatter {
     private static final int separator = Utilities.tabCode;
     private static final int terminator = Utilities.newLineCode;
 
+    /** The number of columns to be used in pretty formatting metadata output.
+     * If -1, then the current terminal width is auto-detected and used.
+     */
+    private final int prettyOutputNumCols;
+
+    public TextMetaDataFormatter(int prettyOutputNumCols) {
+      this.prettyOutputNumCols = prettyOutputNumCols;
+    }
+
     /**
      * Write an error message.
      */
@@ -124,61 +133,56 @@ public class TextMetaDataFormatter implements MetaDataFormatter {
     public void describeTable(DataOutputStream outStream,
                               String colPath, String tableName,
                               Table tbl, Partition part, List<FieldSchema> cols,
-                              boolean isFormatted, boolean isExt)
-         throws HiveException
-   {
-       try {
-         if (colPath.equals(tableName)) {
-           if (!isFormatted) {
-             outStream.writeBytes(MetaDataFormatUtils.displayColsUnformatted(cols));
-           } else {
-             outStream.writeBytes(
-               MetaDataFormatUtils.getAllColumnsInformation(cols,
-                 tbl.isPartitioned() ? tbl.getPartCols() : null));
-           }
-         } else {
-           if (isFormatted) {
-             outStream.writeBytes(MetaDataFormatUtils.getAllColumnsInformation(cols));
-           } else {
-             outStream.writeBytes(MetaDataFormatUtils.displayColsUnformatted(cols));
-           }
-         }
+                              boolean isFormatted, boolean isExt, boolean isPretty)
+         throws HiveException {
+        try {
+          if (colPath.equals(tableName)) {
+            List<FieldSchema> partCols = tbl.isPartitioned() ? tbl.getPartCols() : null;
+            outStream.writeBytes(
+              isPretty ?
+                  MetaDataPrettyFormatUtils.getAllColumnsInformation(
+                      cols, partCols, prettyOutputNumCols)
+                :
+                  MetaDataFormatUtils.getAllColumnsInformation(cols, partCols)
+              );
+          } else {
+            outStream.writeBytes(MetaDataFormatUtils.getAllColumnsInformation(cols));
+          }
 
-         if (tableName.equals(colPath)) {
+          if (tableName.equals(colPath)) {
+            if (isFormatted) {
+              if (part != null) {
+                outStream.writeBytes(MetaDataFormatUtils.getPartitionInformation(part));
+              } else {
+                outStream.writeBytes(MetaDataFormatUtils.getTableInformation(tbl));
+              }
+            }
 
-           if (isFormatted) {
-             if (part != null) {
-               outStream.writeBytes(MetaDataFormatUtils.getPartitionInformation(part));
-             } else {
-               outStream.writeBytes(MetaDataFormatUtils.getTableInformation(tbl));
-             }
-           }
-
-           // if extended desc table then show the complete details of the table
-           if (isExt) {
-             // add empty line
-             outStream.write(terminator);
-             if (part != null) {
-               // show partition information
-               outStream.writeBytes("Detailed Partition Information");
-               outStream.write(separator);
-               outStream.writeBytes(part.getTPartition().toString());
-               outStream.write(separator);
-               // comment column is empty
-               outStream.write(terminator);
-             } else {
-               // show table information
-               outStream.writeBytes("Detailed Table Information");
-               outStream.write(separator);
-               outStream.writeBytes(tbl.getTTable().toString());
-               outStream.write(separator);
-               outStream.write(terminator);
-             }
-           }
-         }
-       } catch (IOException e) {
-           throw new HiveException(e);
-       }
+          // if extended desc table then show the complete details of the table
+            if (isExt) {
+              // add empty line
+              outStream.write(terminator);
+              if (part != null) {
+                // show partition information
+                outStream.writeBytes("Detailed Partition Information");
+                outStream.write(separator);
+                outStream.writeBytes(part.getTPartition().toString());
+                outStream.write(separator);
+                // comment column is empty
+                outStream.write(terminator);
+              } else {
+                // show table information
+                outStream.writeBytes("Detailed Table Information");
+                outStream.write(separator);
+                outStream.writeBytes(tbl.getTTable().toString());
+                outStream.write(separator);
+                outStream.write(terminator);
+              }
+            }
+          }
+        } catch (IOException e) {
+          throw new HiveException(e);
+        }
     }
 
     public void showTableStatus(DataOutputStream outStream,

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -122,7 +123,6 @@ import org.apache.hadoop.hive.ql.udf.UDFToString;
 import org.apache.hadoop.hive.ql.udf.UDFTrim;
 import org.apache.hadoop.hive.ql.udf.UDFType;
 import org.apache.hadoop.hive.ql.udf.UDFUnhex;
-import org.apache.hadoop.hive.ql.udf.UDFUnixTimeStamp;
 import org.apache.hadoop.hive.ql.udf.UDFUpper;
 import org.apache.hadoop.hive.ql.udf.UDFWeekOfYear;
 import org.apache.hadoop.hive.ql.udf.UDFYear;
@@ -177,6 +177,7 @@ import org.apache.hadoop.hive.ql.udf.generic.GenericUDFMap;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFMapKeys;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFMapValues;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFNamedStruct;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFNvl;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPAnd;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqual;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualNS;
@@ -199,9 +200,12 @@ import org.apache.hadoop.hive.ql.udf.generic.GenericUDFStringToMap;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFStruct;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFTimestamp;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFToBinary;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFToUnixTimeStamp;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFToDecimal;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFToUtcTimestamp;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFTranslate;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFUnion;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFUnixTimeStamp;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFWhen;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDTF;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDTFExplode;
@@ -306,6 +310,7 @@ public final class FunctionRegistry {
     registerUDF("regexp_replace", UDFRegExpReplace.class, false);
     registerUDF("regexp_extract", UDFRegExpExtract.class, false);
     registerUDF("parse_url", UDFParseUrl.class, false);
+    registerGenericUDF("nvl", GenericUDFNvl.class);
     registerGenericUDF("split", GenericUDFSplit.class);
     registerGenericUDF("str_to_map", GenericUDFStringToMap.class);
     registerGenericUDF("translate", GenericUDFTranslate.class);
@@ -321,7 +326,6 @@ public final class FunctionRegistry {
     registerUDF("minute", UDFMinute.class, false);
     registerUDF("second", UDFSecond.class, false);
     registerUDF("from_unixtime", UDFFromUnixTime.class, false);
-    registerUDF("unix_timestamp", UDFUnixTimeStamp.class, false);
     registerUDF("to_date", UDFDate.class, false);
     registerUDF("weekofyear", UDFWeekOfYear.class, false);
 
@@ -401,6 +405,8 @@ public final class FunctionRegistry {
         GenericUDFTimestamp.class);
     registerGenericUDF(serdeConstants.BINARY_TYPE_NAME,
         GenericUDFToBinary.class);
+    registerGenericUDF(serdeConstants.DECIMAL_TYPE_NAME,
+        GenericUDFToDecimal.class);
 
     // Aggregate functions
     registerGenericUDAF("max", new GenericUDAFMax());
@@ -465,6 +471,8 @@ public final class FunctionRegistry {
     registerGenericUDF("from_utc_timestamp", GenericUDFFromUtcTimestamp.class);
     registerGenericUDF("to_utc_timestamp", GenericUDFToUtcTimestamp.class);
 
+    registerGenericUDF("unix_timestamp", GenericUDFUnixTimeStamp.class);
+    registerGenericUDF("to_unix_timestamp", GenericUDFToUnixTimeStamp.class);
 
     // Generic UDTF's
     registerGenericUDTF("explode", GenericUDTFExplode.class);
@@ -634,7 +642,8 @@ public final class FunctionRegistry {
     registerNumericType(serdeConstants.BIGINT_TYPE_NAME, 4);
     registerNumericType(serdeConstants.FLOAT_TYPE_NAME, 5);
     registerNumericType(serdeConstants.DOUBLE_TYPE_NAME, 6);
-    registerNumericType(serdeConstants.STRING_TYPE_NAME, 7);
+    registerNumericType(serdeConstants.DECIMAL_TYPE_NAME, 7);
+    registerNumericType(serdeConstants.STRING_TYPE_NAME, 8);
   }
 
   /**
@@ -716,6 +725,11 @@ public final class FunctionRegistry {
         && to.equals(TypeInfoFactory.doubleTypeInfo)) {
       return true;
     }
+    // Allow implicit String to Decimal conversion
+    if (from.equals(TypeInfoFactory.stringTypeInfo)
+        && to.equals(TypeInfoFactory.decimalTypeInfo)) {
+      return true;
+    }
     // Void can be converted to any type
     if (from.equals(TypeInfoFactory.voidTypeInfo)) {
       return true;
@@ -727,7 +741,7 @@ public final class FunctionRegistry {
     }
 
     // Allow implicit conversion from Byte -> Integer -> Long -> Float -> Double
-    // -> String
+    // Decimal -> String
     Integer f = numericTypes.get(from);
     Integer t = numericTypes.get(to);
     if (f == null || t == null) {
@@ -1016,8 +1030,57 @@ public final class FunctionRegistry {
       throw new NoMatchingMethodException(udfClass, argumentsPassed, mlist);
     }
     if (udfMethods.size() > 1) {
-      // Ambiguous method found
-      throw new AmbiguousMethodException(udfClass, argumentsPassed, mlist);
+
+      // if the only difference is numeric types, pick the method 
+      // with the smallest overall numeric type.
+      int lowestNumericType = Integer.MAX_VALUE;
+      boolean multiple = true;
+      Method candidate = null;
+      List<TypeInfo> referenceArguments = null;
+      
+      for (Method m: udfMethods) {
+        int maxNumericType = 0;
+        
+        List<TypeInfo> argumentsAccepted = TypeInfoUtils.getParameterTypeInfos(m, argumentsPassed.size());
+        
+        if (referenceArguments == null) {
+          // keep the arguments for reference - we want all the non-numeric 
+          // arguments to be the same
+          referenceArguments = argumentsAccepted;
+        }
+        
+        Iterator<TypeInfo> referenceIterator = referenceArguments.iterator();
+        
+        for (TypeInfo accepted: argumentsAccepted) {
+          TypeInfo reference = referenceIterator.next();
+          
+          if (numericTypes.containsKey(accepted)) {
+            // We're looking for the udf with the smallest maximum numeric type.
+            int typeValue = numericTypes.get(accepted);
+            maxNumericType = typeValue > maxNumericType ? typeValue : maxNumericType;
+          } else if (!accepted.equals(reference)) {
+            // There are non-numeric arguments that don't match from one UDF to
+            // another. We give up at this point. 
+            throw new AmbiguousMethodException(udfClass, argumentsPassed, mlist);
+          }
+        }
+
+        if (lowestNumericType > maxNumericType) {
+          multiple = false;
+          lowestNumericType = maxNumericType;
+          candidate = m;
+        } else if (maxNumericType == lowestNumericType) {
+          // multiple udfs with the same max type. Unless we find a lower one
+          // we'll give up.
+          multiple = true;
+        }
+      }
+
+      if (!multiple) {
+        return candidate;
+      } else {
+        throw new AmbiguousMethodException(udfClass, argumentsPassed, mlist);
+      }
     }
     return udfMethods.get(0);
   }
@@ -1177,6 +1240,34 @@ public final class FunctionRegistry {
   public static boolean isOpPositive(ExprNodeDesc desc) {
     Class<? extends UDF> udfClass = getUDFClassFromExprDesc(desc);
     return UDFOPPositive.class == udfClass;
+  }
+
+  /**
+   * Returns whether the exprNodeDesc is node of "cast".
+   */
+  private static boolean isOpCast(ExprNodeDesc desc) {
+    if (!(desc instanceof ExprNodeGenericFuncDesc)) {
+      return false;
+    }
+    GenericUDF genericUDF = ((ExprNodeGenericFuncDesc)desc).getGenericUDF();
+    Class udfClass;
+    if (genericUDF instanceof GenericUDFBridge) {
+      udfClass = ((GenericUDFBridge)genericUDF).getUdfClass();
+    } else {
+      udfClass = genericUDF.getClass();
+    }
+    return udfClass == UDFToBoolean.class || udfClass == UDFToByte.class ||
+        udfClass == UDFToDouble.class || udfClass == UDFToFloat.class ||
+        udfClass == UDFToInteger.class || udfClass == UDFToLong.class ||
+        udfClass == UDFToShort.class || udfClass == UDFToString.class ||
+        udfClass == GenericUDFTimestamp.class || udfClass == GenericUDFToBinary.class;
+  }
+
+  /**
+   * Returns whether the exprNodeDesc can recommend name for the expression
+   */
+  public static boolean isOpPreserveInputName(ExprNodeDesc desc) {
+    return isOpCast(desc);
   }
 
   /**

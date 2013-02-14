@@ -145,7 +145,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.employee_part
               numFiles 1
-              numPartitions 2
               numRows 0
               partition_columns employeesalary
               rawDataSize 0
@@ -222,10 +221,12 @@ STAGE PLANS:
 
 PREHOOK: query: analyze table Employee_Part partition (employeeSalary=2000.0) compute statistics for columns employeeID
 PREHOOK: type: QUERY
+PREHOOK: Input: default@employee_part
 PREHOOK: Input: default@employee_part@employeesalary=2000.0
 #### A masked pattern was here ####
 POSTHOOK: query: analyze table Employee_Part partition (employeeSalary=2000.0) compute statistics for columns employeeID
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@employee_part
 POSTHOOK: Input: default@employee_part@employeesalary=2000.0
 #### A masked pattern was here ####
 PREHOOK: query: explain 
@@ -350,7 +351,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.employee_part
               numFiles 1
-              numPartitions 2
               numRows 0
               partition_columns employeesalary
               rawDataSize 0
@@ -427,9 +427,11 @@ STAGE PLANS:
 
 PREHOOK: query: analyze table Employee_Part partition (employeeSalary=4000.0) compute statistics for columns employeeID
 PREHOOK: type: QUERY
+PREHOOK: Input: default@employee_part
 PREHOOK: Input: default@employee_part@employeesalary=4000.0
 #### A masked pattern was here ####
 POSTHOOK: query: analyze table Employee_Part partition (employeeSalary=4000.0) compute statistics for columns employeeID
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@employee_part
 POSTHOOK: Input: default@employee_part@employeesalary=4000.0
 #### A masked pattern was here ####

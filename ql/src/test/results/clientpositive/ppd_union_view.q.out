@@ -260,7 +260,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.t1_mapping
               numFiles 1
-              numPartitions 2
               numRows 1
               partition_columns ds
               rawDataSize 12
@@ -306,7 +305,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.t1_old
               numFiles 1
-              numPartitions 2
               numRows 1
               partition_columns ds
               rawDataSize 14
@@ -502,13 +500,19 @@ STAGE PLANS:
 PREHOOK: query: select * from t1 where ds = '2011-10-13'
 PREHOOK: type: QUERY
 PREHOOK: Input: default@t1
+PREHOOK: Input: default@t1_mapping
 PREHOOK: Input: default@t1_mapping@ds=2011-10-13
+PREHOOK: Input: default@t1_new
+PREHOOK: Input: default@t1_old
 PREHOOK: Input: default@t1_old@ds=2011-10-13
 #### A masked pattern was here ####
 POSTHOOK: query: select * from t1 where ds = '2011-10-13'
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@t1
+POSTHOOK: Input: default@t1_mapping
 POSTHOOK: Input: default@t1_mapping@ds=2011-10-13
+POSTHOOK: Input: default@t1_new
+POSTHOOK: Input: default@t1_old
 POSTHOOK: Input: default@t1_old@ds=2011-10-13
 #### A masked pattern was here ####
 POSTHOOK: Lineage: t1_mapping PARTITION(ds=2011-10-13).key SIMPLE []
@@ -527,13 +531,19 @@ key3	value3	2011-10-13
 PREHOOK: query: select * from t1 where ds = '2011-10-14'
 PREHOOK: type: QUERY
 PREHOOK: Input: default@t1
+PREHOOK: Input: default@t1_mapping
 PREHOOK: Input: default@t1_mapping@ds=2011-10-14
+PREHOOK: Input: default@t1_new
+PREHOOK: Input: default@t1_old
 PREHOOK: Input: default@t1_old@ds=2011-10-14
 #### A masked pattern was here ####
 POSTHOOK: query: select * from t1 where ds = '2011-10-14'
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@t1
+POSTHOOK: Input: default@t1_mapping
 POSTHOOK: Input: default@t1_mapping@ds=2011-10-14
+POSTHOOK: Input: default@t1_new
+POSTHOOK: Input: default@t1_old
 POSTHOOK: Input: default@t1_old@ds=2011-10-14
 #### A masked pattern was here ####
 POSTHOOK: Lineage: t1_mapping PARTITION(ds=2011-10-13).key SIMPLE []
@@ -791,7 +801,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
               name default.t1_new
               numFiles 1
-              numPartitions 2
               numRows 1
               partition_columns ds
               rawDataSize 11
@@ -835,12 +844,18 @@ STAGE PLANS:
 PREHOOK: query: select * from t1 where ds = '2011-10-15'
 PREHOOK: type: QUERY
 PREHOOK: Input: default@t1
+PREHOOK: Input: default@t1_mapping
+PREHOOK: Input: default@t1_new
 PREHOOK: Input: default@t1_new@ds=2011-10-15
+PREHOOK: Input: default@t1_old
 #### A masked pattern was here ####
 POSTHOOK: query: select * from t1 where ds = '2011-10-15'
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@t1
+POSTHOOK: Input: default@t1_mapping
+POSTHOOK: Input: default@t1_new
 POSTHOOK: Input: default@t1_new@ds=2011-10-15
+POSTHOOK: Input: default@t1_old
 #### A masked pattern was here ####
 POSTHOOK: Lineage: t1_mapping PARTITION(ds=2011-10-13).key SIMPLE []
 POSTHOOK: Lineage: t1_mapping PARTITION(ds=2011-10-13).keymap SIMPLE []
@@ -858,12 +873,18 @@ key1	value1	2011-10-15
 PREHOOK: query: select * from t1 where ds = '2011-10-16'
 PREHOOK: type: QUERY
 PREHOOK: Input: default@t1
+PREHOOK: Input: default@t1_mapping
+PREHOOK: Input: default@t1_new
 PREHOOK: Input: default@t1_new@ds=2011-10-16
+PREHOOK: Input: default@t1_old
 #### A masked pattern was here ####
 POSTHOOK: query: select * from t1 where ds = '2011-10-16'
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@t1
+POSTHOOK: Input: default@t1_mapping
+POSTHOOK: Input: default@t1_new
 POSTHOOK: Input: default@t1_new@ds=2011-10-16
+POSTHOOK: Input: default@t1_old
 #### A masked pattern was here ####
 POSTHOOK: Lineage: t1_mapping PARTITION(ds=2011-10-13).key SIMPLE []
 POSTHOOK: Lineage: t1_mapping PARTITION(ds=2011-10-13).keymap SIMPLE []

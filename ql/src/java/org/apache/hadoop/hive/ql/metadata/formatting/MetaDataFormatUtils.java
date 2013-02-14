@@ -50,7 +50,7 @@ public final class MetaDataFormatUtils {
   public static final String FIELD_DELIM = "\t";
   public static final String LINE_DELIM = "\n";
 
-  private static final int DEFAULT_STRINGBUILDER_SIZE = 2048;
+  static final int DEFAULT_STRINGBUILDER_SIZE = 2048;
   private static final int ALIGNMENT = 20;
 
   private MetaDataFormatUtils() {
@@ -86,10 +86,9 @@ public final class MetaDataFormatUtils {
 
   private static void formatAllFields(StringBuilder tableInfo, List<FieldSchema> cols) {
     for (FieldSchema col : cols) {
-      formatFieldSchemas(tableInfo, col);
+      formatOutput(col.getName(), col.getType(), getComment(col), tableInfo);
     }
   }
-
 
   public static String getAllColumnsInformation(Index index) {
     StringBuilder indexInfo = new StringBuilder(DEFAULT_STRINGBUILDER_SIZE);
@@ -128,22 +127,6 @@ public final class MetaDataFormatUtils {
 
     return indexInfo.toString();
 }
-
-  /*
-    Displaying columns unformatted for backward compatibility.
-   */
-  public static String displayColsUnformatted(List<FieldSchema> cols) {
-    StringBuilder colBuffer = new StringBuilder(DEFAULT_STRINGBUILDER_SIZE);
-    for (FieldSchema col : cols) {
-      colBuffer.append(col.getName());
-      colBuffer.append(FIELD_DELIM);
-      colBuffer.append(col.getType());
-      colBuffer.append(FIELD_DELIM);
-      colBuffer.append(col.getComment() == null ? "" : col.getComment());
-      colBuffer.append(LINE_DELIM);
-    }
-    return colBuffer.toString();
-  }
 
   public static String getPartitionInformation(Partition part) {
     StringBuilder tableInfo = new StringBuilder(DEFAULT_STRINGBUILDER_SIZE);
@@ -279,9 +262,8 @@ public final class MetaDataFormatUtils {
     }
   }
 
-  private static void formatFieldSchemas(StringBuilder tableInfo, FieldSchema col) {
-    String comment = col.getComment() != null ? col.getComment() : "None";
-    formatOutput(col.getName(), col.getType(), comment, tableInfo);
+  static String getComment(FieldSchema col) {
+    return col.getComment() != null ? col.getComment() : "None";
   }
 
   private static String formatDate(long timeInSeconds) {
@@ -309,11 +291,23 @@ public final class MetaDataFormatUtils {
     tableInfo.append(String.format("%-" + ALIGNMENT + "s", value)).append(LINE_DELIM);
   }
 
-  private static void formatOutput(String col1, String col2, String col3,
+  private static void formatOutput(String colName, String colType, String colComment,
                                    StringBuilder tableInfo) {
-    tableInfo.append(String.format("%-" + ALIGNMENT + "s", col1)).append(FIELD_DELIM);
-    tableInfo.append(String.format("%-" + ALIGNMENT + "s", col2)).append(FIELD_DELIM);
-    tableInfo.append(String.format("%-" + ALIGNMENT + "s", col3)).append(LINE_DELIM);
+    tableInfo.append(String.format("%-" + ALIGNMENT + "s", colName)).append(FIELD_DELIM);
+    tableInfo.append(String.format("%-" + ALIGNMENT + "s", colType)).append(FIELD_DELIM);
+
+    // comment indent processing for multi-line comments
+    // comments should be indented the same amount on each line
+    // if the first line comment starts indented by k,
+    // the following line comments should also be indented by k
+    String[] commentSegments = colComment.split("\n|\r|\r\n");
+    tableInfo.append(String.format("%-" + ALIGNMENT + "s", commentSegments[0])).append(LINE_DELIM);
+    int colNameLength = ALIGNMENT > colName.length() ? ALIGNMENT : colName.length();
+    int colTypeLength = ALIGNMENT > colType.length() ? ALIGNMENT : colType.length();
+    for (int i = 1; i < commentSegments.length; i++) {
+      tableInfo.append(String.format("%" + colNameLength + "s" + FIELD_DELIM + "%"
+        + colTypeLength + "s" + FIELD_DELIM + "%s", "", "", commentSegments[i])).append(LINE_DELIM);
+    }
   }
 
   public static String[] getColumnsHeader() {

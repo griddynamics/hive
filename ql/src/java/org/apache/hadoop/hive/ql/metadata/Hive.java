@@ -31,6 +31,7 @@ import static org.apache.hadoop.hive.serde.serdeConstants.STRING_TYPE_NAME;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hive.metastore.HiveMetaHookLoader;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
+import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
@@ -102,16 +104,16 @@ public class Hive {
   private IMetaStoreClient metaStoreClient;
   private String currentDatabase;
 
-  private static ThreadLocal<Hive> hiveDB = new ThreadLocal() {
+  private static ThreadLocal<Hive> hiveDB = new ThreadLocal<Hive>() {
     @Override
-    protected synchronized Object initialValue() {
+    protected synchronized Hive initialValue() {
       return null;
     }
 
     @Override
     public synchronized void remove() {
       if (this.get() != null) {
-        ((Hive) this.get()).close();
+        this.get().close();
       }
       super.remove();
     }
@@ -407,7 +409,7 @@ public class Hive {
   }
 
   /**
-   * Updates the existing table metadata with the new metadata.
+   * Updates the existing partition metadata with the new metadata.
    *
    * @param tblName
    *          name of the existing table
@@ -420,13 +422,30 @@ public class Hive {
   public void alterPartition(String tblName, Partition newPart)
       throws InvalidOperationException, HiveException {
     Table t = newTable(tblName);
+    alterPartition(t.getDbName(), t.getTableName(), newPart);
+  }
+
+  /**
+   * Updates the existing partition metadata with the new metadata.
+   *
+   * @param dbName
+   *          name of the exiting table's database
+   * @param tblName
+   *          name of the existing table
+   * @param newPart
+   *          new partition
+   * @throws InvalidOperationException
+   *           if the changes in metadata is not acceptable
+   * @throws TException
+   */
+  public void alterPartition(String dbName, String tblName, Partition newPart)
+      throws InvalidOperationException, HiveException {
     try {
       // Remove the DDL time so that it gets refreshed
       if (newPart.getParameters() != null) {
         newPart.getParameters().remove(hive_metastoreConstants.DDL_TIME);
       }
-      getMSC().alter_partition(t.getDbName(), t.getTableName(),
-          newPart.getTPartition());
+      getMSC().alter_partition(dbName, tblName, newPart.getTPartition());
 
     } catch (MetaException e) {
       throw new HiveException("Unable to alter partition.", e);
@@ -1280,7 +1299,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
   }
   if ((skewedValue.size() > 0) && (skewedValue.size() == skewedInfo.getSkewedColNames().size())
       && !skewedColValueLocationMaps.containsKey(skewedValue)) {
-    skewedColValueLocationMaps.put(skewedValue, lbDirName);
+    skewedColValueLocationMaps.put(skewedValue, lbdPath.toString());
   }
 }
 
@@ -1997,28 +2016,59 @@ private void constructOneLBLocationMap(FileStatus fSta,
     }
   }
 
-  static private void checkPaths(HiveConf conf,
-    FileSystem fs, FileStatus[] srcs, Path destf,
-    boolean replace) throws HiveException {
+  // for each file or directory in 'srcs', make mapping for every file in src to safe name in dest
+  private static List<List<Path[]>> checkPaths(HiveConf conf,
+      FileSystem fs, FileStatus[] srcs, Path destf,
+      boolean replace) throws HiveException {
+
+    List<List<Path[]>> result = new ArrayList<List<Path[]>>();
     try {
+      FileStatus destStatus = !replace && fs.exists(destf) ? fs.getFileStatus(destf) : null;
+      if (destStatus != null && !destStatus.isDir()) {
+        throw new HiveException("checkPaths: destination " + destf
+            + " should be a directory");
+      }
       for (FileStatus src : srcs) {
-        FileStatus[] items = fs.listStatus(src.getPath());
+        FileStatus[] items;
+        if (src.isDir()) {
+          items = fs.listStatus(src.getPath());
+          Arrays.sort(items);
+        } else {
+          items = new FileStatus[] {src};
+        }
+
+        List<Path[]> srcToDest = new ArrayList<Path[]>();
         for (FileStatus item : items) {
-          Path itemStaging = item.getPath();
+
+          Path itemSource = item.getPath();
 
           if (Utilities.isTempPath(item)) {
             // This check is redundant because temp files are removed by
             // execution layer before
             // calling loadTable/Partition. But leaving it in just in case.
-            fs.delete(itemStaging, true);
+            fs.delete(itemSource, true);
             continue;
           }
 
           if (!conf.getBoolVar(HiveConf.ConfVars.HIVE_HADOOP_SUPPORTS_SUBDIRECTORIES) &&
             item.isDir()) {
             throw new HiveException("checkPaths: " + src.getPath()
-                + " has nested directory" + itemStaging);
+                + " has nested directory" + itemSource);
           }
+          // Strip off the file type, if any so we don't make:
+          // 000000_0.gz -> 000000_0.gz_copy_1
+          String name = itemSource.getName();
+          String filetype;
+          int index = name.lastIndexOf('.');
+          if (index >= 0) {
+            filetype = name.substring(index);
+            name = name.substring(0, index);
+          } else {
+            filetype = "";
+          }
+
+          Path itemDest = new Path(destf, itemSource.getName());
+
           if (!replace) {
             // It's possible that the file we're copying may have the same
             // relative name as an existing file in the "destf" directory.
@@ -2028,51 +2078,30 @@ private void constructOneLBLocationMap(FileStatus fSta,
             // on "_copy_N" where N starts at 1 and works its way up until
             // we find a free space.
 
-            // Note: there are race conditions here, but I don't believe
-            // they're worse than what was already present.
-            int counter = 1;
-
-            // Strip off the file type, if any so we don't make:
-            // 000000_0.gz -> 000000_0.gz_copy_1
-            String name = itemStaging.getName();
-            String filetype;
-            int index = name.lastIndexOf('.');
-            if (index >= 0) {
-              filetype = name.substring(index);
-              name = name.substring(0, index);
-            } else {
-              filetype = "";
-            }
-
-            Path itemDest = new Path(destf, itemStaging.getName());
-            Path itemStagingBase = new Path(itemStaging.getParent(), name);
-
-            while (fs.exists(itemDest)) {
-              Path proposedStaging = itemStagingBase
-                  .suffix("_copy_" + counter++).suffix(filetype);
-              Path proposedDest = new Path(destf, proposedStaging.getName());
-
-              if (fs.exists(proposedDest)) {
-                // There's already a file in our destination directory with our
-                // _copy_N suffix. We've been here before...
-                LOG.trace(proposedDest + " already exists");
-                continue;
-              }
-
-              if (!fs.rename(itemStaging, proposedStaging)) {
-                LOG.debug("Unsuccessfully in attempt to rename " + itemStaging + " to " + proposedStaging + "...");
-                continue;
-              }
-
-              LOG.debug("Successfully renamed " + itemStaging + " to " + proposedStaging);
-              itemDest = proposedDest;
+            // removed source file staging.. it's more confusing when faild.
+            for (int counter = 1; fs.exists(itemDest) || destExists(result, itemDest); counter++) {
+              itemDest = new Path(destf, name + ("_copy_" + counter) + filetype);
             }
           }
+          srcToDest.add(new Path[]{itemSource, itemDest});
         }
+        result.add(srcToDest);
       }
     } catch (IOException e) {
       throw new HiveException("checkPaths: filesystem error in check phase", e);
     }
+    return result;
+  }
+
+  private static boolean destExists(List<List<Path[]>> result, Path proposed) {
+    for (List<Path[]> sdpairs : result) {
+      for (Path[] sdpair : sdpairs) {
+        if (sdpair[1].equals(proposed)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   static protected void copyFiles(HiveConf conf, Path srcf, Path destf, FileSystem fs)
@@ -2101,17 +2130,14 @@ private void constructOneLBLocationMap(FileStatus fSta,
       // srcs = new FileStatus[0]; Why is this needed?
     }
     // check that source and target paths exist
-    checkPaths(conf, fs, srcs, destf, false);
+    List<List<Path[]>> result = checkPaths(conf, fs, srcs, destf, false);
 
     // move it, move it
     try {
-      for (FileStatus src : srcs) {
-        FileStatus[] items = fs.listStatus(src.getPath());
-        for (FileStatus item : items) {
-          Path source = item.getPath();
-          Path target = new Path(destf, item.getPath().getName());
-          if (!fs.rename(source, target)) {
-            throw new IOException("Cannot move " + source + " to " + target);
+      for (List<Path[]> sdpairs : result) {
+        for (Path[] sdpair : sdpairs) {
+          if (!fs.rename(sdpair[0], sdpair[1])) {
+            throw new IOException("Cannot move " + sdpair[0] + " to " + sdpair[1]);
           }
         }
       }
@@ -2151,7 +2177,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
         LOG.info("No sources specified to move: " + srcf);
         return;
       }
-      checkPaths(conf, fs, srcs, destf, true);
+      List<List<Path[]>> result = checkPaths(conf, fs, srcs, destf, true);
 
       // point of no return -- delete oldPath
       if (oldPath != null) {
@@ -2190,11 +2216,11 @@ private void constructOneLBLocationMap(FileStatus fSta,
           fs.mkdirs(destf);
         }
         // srcs must be a list of files -- ensured by LoadSemanticAnalyzer
-        for (FileStatus src : srcs) {
-          Path destPath = new Path(destf, src.getPath().getName());
-          if (!fs.rename(src.getPath(), destPath)) {
-            throw new HiveException("Error moving: " + src.getPath()
-                + " into: " + destf);
+        for (List<Path[]> sdpairs : result) {
+          for (Path[] sdpair : sdpairs) {
+            if (!fs.rename(sdpair[0], sdpair[1])) {
+              throw new IOException("Error moving: " + sdpair[0] + " into: " + sdpair[1]);
+            }
           }
         }
       }
@@ -2236,7 +2262,8 @@ private void constructOneLBLocationMap(FileStatus fSta,
           }
         }
       };
-    return new HiveMetaStoreClient(conf, hookLoader);
+    return RetryingMetaStoreClient.getProxy(conf, hookLoader,
+        HiveMetaStoreClient.class.getName());
   }
 
   /**

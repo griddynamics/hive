@@ -115,6 +115,9 @@ public final class LocalMapJoinProcFactory {
         e.printStackTrace();
       }
 
+      // mapjoin should not affected by join reordering
+      mapJoinOp.getConf().resetOrder();
+
       HashTableSinkDesc hashTableSinkDesc = new HashTableSinkDesc(mapJoinOp.getConf());
       HashTableSinkOperator hashTableSinkOp = (HashTableSinkOperator) OperatorFactory
           .get(hashTableSinkDesc);
@@ -132,8 +135,6 @@ public final class LocalMapJoinProcFactory {
 
       // get the last operator for processing big tables
       int bigTable = mapJoinOp.getConf().getPosBigTable();
-      Byte[] order = mapJoinOp.getConf().getTagOrder();
-      int bigTableAlias = (int) order[bigTable];
 
       // the parent ops for hashTableSinkOp
       List<Operator<? extends OperatorDesc>> smallTablesParentOp =
@@ -143,7 +144,7 @@ public final class LocalMapJoinProcFactory {
       // get all parents
       List<Operator<? extends OperatorDesc>> parentsOp = mapJoinOp.getParentOperators();
       for (int i = 0; i < parentsOp.size(); i++) {
-        if (i == bigTableAlias) {
+        if (i == bigTable) {
           smallTablesParentOp.add(null);
           continue;
         }

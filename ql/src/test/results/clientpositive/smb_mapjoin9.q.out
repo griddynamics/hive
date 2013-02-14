@@ -107,12 +107,16 @@ FROM hive_test_smb_bucket1 a JOIN
 hive_test_smb_bucket2 b
 ON a.key = b.key WHERE a.ds = '2010-10-15' and b.ds='2010-10-15' and  b.key IS NOT NULL
 PREHOOK: type: QUERY
+PREHOOK: Input: default@hive_test_smb_bucket1
+PREHOOK: Input: default@hive_test_smb_bucket2
 #### A masked pattern was here ####
 POSTHOOK: query: SELECT /* + MAPJOIN(b) */ b.key as k1, b.value, b.ds, a.key as k2
 FROM hive_test_smb_bucket1 a JOIN
 hive_test_smb_bucket2 b
 ON a.key = b.key WHERE a.ds = '2010-10-15' and b.ds='2010-10-15' and  b.key IS NOT NULL
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@hive_test_smb_bucket1
+POSTHOOK: Input: default@hive_test_smb_bucket2
 #### A masked pattern was here ####
 PREHOOK: query: explain extended
 SELECT /* + MAPJOIN(a) */ b.key as k1, b.value, b.ds, a.key as k2
@@ -211,12 +215,16 @@ FROM hive_test_smb_bucket1 a JOIN
 hive_test_smb_bucket2 b
 ON a.key = b.key WHERE a.ds = '2010-10-15' and b.ds='2010-10-15' and  b.key IS NOT NULL
 PREHOOK: type: QUERY
+PREHOOK: Input: default@hive_test_smb_bucket1
+PREHOOK: Input: default@hive_test_smb_bucket2
 #### A masked pattern was here ####
 POSTHOOK: query: SELECT /* + MAPJOIN(a) */ b.key as k1, b.value, b.ds, a.key as k2
 FROM hive_test_smb_bucket1 a JOIN
 hive_test_smb_bucket2 b
 ON a.key = b.key WHERE a.ds = '2010-10-15' and b.ds='2010-10-15' and  b.key IS NOT NULL
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@hive_test_smb_bucket1
+POSTHOOK: Input: default@hive_test_smb_bucket2
 #### A masked pattern was here ####
 PREHOOK: query: insert overwrite table hive_test_smb_bucket1 partition (ds='2010-10-15') select key, value from src
 PREHOOK: type: QUERY
@@ -263,9 +271,14 @@ ABSTRACT SYNTAX TREE:
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
-  Stage-0 depends on stages: Stage-1
-  Stage-4 depends on stages: Stage-0
-  Stage-2 depends on stages: Stage-4
+  Stage-7 depends on stages: Stage-1 , consists of Stage-4, Stage-3, Stage-5
+  Stage-4
+  Stage-0 depends on stages: Stage-4, Stage-3, Stage-6
+  Stage-9 depends on stages: Stage-0
+  Stage-2 depends on stages: Stage-9
+  Stage-3
+  Stage-5
+  Stage-6 depends on stages: Stage-5
 
 STAGE PLANS:
   Stage: Stage-1
@@ -322,13 +335,22 @@ STAGE PLANS:
                           output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
                           name: default.smb_mapjoin9_results
 
+  Stage: Stage-7
+    Conditional Operator
+
+  Stage: Stage-4
+    Move Operator
+      files:
+          hdfs directory: true
+#### A masked pattern was here ####
+
   Stage: Stage-0
     Move Operator
       files:
           hdfs directory: true
 #### A masked pattern was here ####
 
-  Stage: Stage-4
+  Stage: Stage-9
       Create Table Operator:
         Create Table
           columns: k1 int, value string, ds string, k2 int
@@ -342,6 +364,36 @@ STAGE PLANS:
   Stage: Stage-2
     Stats-Aggr Operator
 
+  Stage: Stage-3
+    Map Reduce
+      Alias -> Map Operator Tree:
+#### A masked pattern was here ####
+            File Output Operator
+              compressed: false
+              GlobalTableId: 0
+              table:
+                  input format: org.apache.hadoop.mapred.TextInputFormat
+                  output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                  name: default.smb_mapjoin9_results
+
+  Stage: Stage-5
+    Map Reduce
+      Alias -> Map Operator Tree:
+#### A masked pattern was here ####
+            File Output Operator
+              compressed: false
+              GlobalTableId: 0
+              table:
+                  input format: org.apache.hadoop.mapred.TextInputFormat
+                  output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                  name: default.smb_mapjoin9_results
+
+  Stage: Stage-6
+    Move Operator
+      files:
+          hdfs directory: true
+#### A masked pattern was here ####
+
 
 PREHOOK: query: create table smb_mapjoin9_results as
 SELECT /* + MAPJOIN(b) */ b.key as k1, b.value, b.ds, a.key as k2
@@ -349,7 +401,9 @@ FROM hive_test_smb_bucket1 a JOIN
 hive_test_smb_bucket2 b
 ON a.key = b.key WHERE a.ds = '2010-10-15' and b.ds='2010-10-15' and  b.key IS NOT NULL
 PREHOOK: type: CREATETABLE_AS_SELECT
+PREHOOK: Input: default@hive_test_smb_bucket1
 PREHOOK: Input: default@hive_test_smb_bucket1@ds=2010-10-15
+PREHOOK: Input: default@hive_test_smb_bucket2
 PREHOOK: Input: default@hive_test_smb_bucket2@ds=2010-10-15
 POSTHOOK: query: create table smb_mapjoin9_results as
 SELECT /* + MAPJOIN(b) */ b.key as k1, b.value, b.ds, a.key as k2
@@ -357,7 +411,9 @@ FROM hive_test_smb_bucket1 a JOIN
 hive_test_smb_bucket2 b
 ON a.key = b.key WHERE a.ds = '2010-10-15' and b.ds='2010-10-15' and  b.key IS NOT NULL
 POSTHOOK: type: CREATETABLE_AS_SELECT
+POSTHOOK: Input: default@hive_test_smb_bucket1
 POSTHOOK: Input: default@hive_test_smb_bucket1@ds=2010-10-15
+POSTHOOK: Input: default@hive_test_smb_bucket2
 POSTHOOK: Input: default@hive_test_smb_bucket2@ds=2010-10-15
 POSTHOOK: Output: default@smb_mapjoin9_results
 POSTHOOK: Lineage: hive_test_smb_bucket1 PARTITION(ds=2010-10-15).key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]

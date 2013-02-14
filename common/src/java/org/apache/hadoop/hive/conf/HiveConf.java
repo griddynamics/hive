@@ -52,6 +52,7 @@ public class HiveConf extends Configuration {
   protected Properties origProp;
   protected String auxJars;
   private static final Log l4j = LogFactory.getLog(HiveConf.class);
+  private static URL hiveDefaultURL = null;
   private static URL hiveSiteURL = null;
   private static byte[] confVarByteArray = null;
 
@@ -63,20 +64,10 @@ public class HiveConf extends Configuration {
       classLoader = HiveConf.class.getClassLoader();
     }
 
-    // Log a warning if hive-default.xml is found on the classpath
-    URL hiveDefaultURL = classLoader.getResource("hive-default.xml");
-    if (hiveDefaultURL != null) {
-      l4j.warn("DEPRECATED: Ignoring hive-default.xml found on the CLASSPATH at " +
-               hiveDefaultURL.getPath());
-    }
+    hiveDefaultURL = classLoader.getResource("hive-default.xml");
 
     // Look for hive-site.xml on the CLASSPATH and log its location if found.
     hiveSiteURL = classLoader.getResource("hive-site.xml");
-    if (hiveSiteURL == null) {
-      l4j.warn("hive-site.xml not found on CLASSPATH");
-    } else {
-      l4j.debug("Using hive-site.xml found on CLASSPATH at " + hiveSiteURL.getPath());
-    }
     for (ConfVars confVar : ConfVars.values()) {
       vars.put(confVar.varname, confVar);
     }
@@ -91,7 +82,8 @@ public class HiveConf extends Configuration {
       HiveConf.ConfVars.METASTOREDIRECTORY,
       HiveConf.ConfVars.METASTOREWAREHOUSE,
       HiveConf.ConfVars.METASTOREURIS,
-      HiveConf.ConfVars.METASTORETHRIFTRETRIES,
+      HiveConf.ConfVars.METASTORETHRIFTCONNECTIONRETRIES,
+      HiveConf.ConfVars.METASTORETHRIFTFAILURERETRIES,
       HiveConf.ConfVars.METASTORE_CLIENT_CONNECT_RETRY_DELAY,
       HiveConf.ConfVars.METASTORE_CLIENT_SOCKET_TIMEOUT,
       HiveConf.ConfVars.METASTOREPWD,
@@ -131,6 +123,7 @@ public class HiveConf extends Configuration {
       HiveConf.ConfVars.METASTORE_END_FUNCTION_LISTENERS,
       HiveConf.ConfVars.METASTORE_PART_INHERIT_TBL_PROPS,
       HiveConf.ConfVars.METASTORE_BATCH_RETRIEVE_TABLE_PARTITION_MAX,
+      HiveConf.ConfVars.METASTORE_INIT_HOOKS,
       HiveConf.ConfVars.METASTORE_PRE_EVENT_LISTENERS,
       HiveConf.ConfVars.HMSHANDLERATTEMPTS,
       HiveConf.ConfVars.HMSHANDLERINTERVAL,
@@ -183,6 +176,7 @@ public class HiveConf extends Configuration {
     PREEXECHOOKS("hive.exec.pre.hooks", ""),
     POSTEXECHOOKS("hive.exec.post.hooks", ""),
     ONFAILUREHOOKS("hive.exec.failure.hooks", ""),
+    OPERATORHOOKS("hive.exec.operator.hooks", ""),
     CLIENTSTATSPUBLISHERS("hive.client.stats.publishers", ""),
     EXECPARALLEL("hive.exec.parallel", false), // parallel query launching
     EXECPARALLETHREADNUMBER("hive.exec.parallel.thread.number", 8),
@@ -243,7 +237,10 @@ public class HiveConf extends Configuration {
     METASTOREWAREHOUSE("hive.metastore.warehouse.dir", "/user/hive/warehouse"),
     METASTOREURIS("hive.metastore.uris", ""),
     // Number of times to retry a connection to a Thrift metastore server
-    METASTORETHRIFTRETRIES("hive.metastore.connect.retries", 5),
+    METASTORETHRIFTCONNECTIONRETRIES("hive.metastore.connect.retries", 3),
+    // Number of times to retry a Thrift metastore call upon failure
+    METASTORETHRIFTFAILURERETRIES("hive.metastore.failure.retries", 1),
+
     // Number of seconds the client should wait between connection attempts
     METASTORE_CLIENT_CONNECT_RETRY_DELAY("hive.metastore.client.connect.retry.delay", 1),
     // Socket timeout for the client connection (in seconds)
@@ -314,6 +311,9 @@ public class HiveConf extends Configuration {
     METASTORE_BATCH_RETRIEVE_MAX("hive.metastore.batch.retrieve.max", 300),
     METASTORE_BATCH_RETRIEVE_TABLE_PARTITION_MAX(
       "hive.metastore.batch.retrieve.table.partition.max", 1000),
+    // A comma separated list of hooks which implement MetaStoreInitListener and will be run at
+    // the beginning of HMSHandler initialization
+    METASTORE_INIT_HOOKS("hive.metastore.init.hooks", ""),
     METASTORE_PRE_EVENT_LISTENERS("hive.metastore.pre.event.listeners", ""),
     METASTORE_EVENT_LISTENERS("hive.metastore.event.listeners", ""),
     // should we do checks against the storage (usually hdfs) for operations like drop_partition
@@ -350,6 +350,7 @@ public class HiveConf extends Configuration {
     CLIIGNOREERRORS("hive.cli.errors.ignore", false),
     CLIPRINTCURRENTDB("hive.cli.print.current.db", false),
     CLIPROMPT("hive.cli.prompt", "hive"),
+    CLIPRETTYOUTPUTNUMCOLS("hive.cli.pretty.output.num.cols", -1),
 
     HIVE_METASTORE_FS_HANDLER_CLS("hive.metastore.fs.handler.class", "org.apache.hadoop.hive.metastore.HiveMetaStoreFsImpl"),
 
@@ -391,6 +392,8 @@ public class HiveConf extends Configuration {
     HIVEALIAS("hive.alias", ""),
     HIVEMAPSIDEAGGREGATE("hive.map.aggr", true),
     HIVEGROUPBYSKEW("hive.groupby.skewindata", false),
+    HIVE_OPTIMIZE_MULTI_GROUPBY_COMMON_DISTINCTS("hive.optimize.multigroupby.common.distincts",
+        true),
     HIVEJOINEMITINTERVAL("hive.join.emit.interval", 1000),
     HIVEJOINCACHESIZE("hive.join.cache.size", 25000),
     HIVEMAPJOINBUCKETCACHESIZE("hive.mapjoin.bucket.cache.size", 100),
@@ -403,6 +406,8 @@ public class HiveConf extends Configuration {
     HIVEMAPAGGRHASHMINREDUCTION("hive.map.aggr.hash.min.reduction", (float) 0.5),
     HIVEMULTIGROUPBYSINGLEREDUCER("hive.multigroupby.singlereducer", true),
     HIVE_MAP_GROUPBY_SORT("hive.map.groupby.sorted", false),
+    HIVE_GROUPBY_ORDERBY_POSITION_ALIAS("hive.groupby.orderby.position.alias", false),
+    HIVE_NEW_JOB_GROUPING_SET_CARDINALITY("hive.new.job.grouping.set.cardinality", 30),
 
     // for hive udtf operator
     HIVEUDTFAUTOPROGRESS("hive.udtf.auto.progress", false),
@@ -465,10 +470,12 @@ public class HiveConf extends Configuration {
 
     HIVESKEWJOIN("hive.optimize.skewjoin", false),
     HIVECONVERTJOIN("hive.auto.convert.join", false),
+    HIVECONVERTJOINNOCONDITIONALTASK("hive.auto.convert.join.noconditionaltask", false),
+    HIVECONVERTJOINNOCONDITIONALTASKTHRESHOLD("hive.auto.convert.join.noconditionaltask.size",
+        10000000L),
     HIVESKEWJOINKEY("hive.skewjoin.key", 100000),
     HIVESKEWJOINMAPJOINNUMMAPTASK("hive.skewjoin.mapjoin.map.tasks", 10000),
     HIVESKEWJOINMAPJOINMINSPLIT("hive.skewjoin.mapjoin.min.split", 33554432L), //32M
-    HIVEMERGEMAPONLY("hive.mergejob.maponly", true),
 
     HIVESENDHEARTBEAT("hive.heartbeat.interval", 1000),
     HIVELIMITMAXROWSIZE("hive.limit.row.max.size", 100000L),
@@ -532,6 +539,18 @@ public class HiveConf extends Configuration {
     HIVE_INDEX_COMPACT_QUERY_MAX_SIZE("hive.index.compact.query.max.size", (long) 10 * 1024 * 1024 * 1024), // 10G
     HIVE_INDEX_COMPACT_BINARY_SEARCH("hive.index.compact.binary.search", true),
 
+    //Profiler
+    HIVEPROFILERDBCLASS("hive.profiler.dbclass","jdbc:derby"),
+    HIVEPROFILERJDBCDRIVER("hive.profiler.jdbcdriver", "org.apache.derby.jdbc.EmbeddedDriver"),
+    HIVEPROFILERDBCONNECTIONSTRING("hive.profiler.dbconnectionstring",
+        "jdbc:derby:;databaseName=TempProfilerStore;create=true"), // automatically create database
+    // default timeout for JDBC connection
+    HIVE_PROFILER_JDBC_TIMEOUT("hive.profiler.jdbc.timeout", 30),
+    HIVE_PROFILER_RETRIES_MAX("hive.stats.retries.max",
+        0),     // maximum # of retries to insert/select/delete the stats DB
+    HIVE_PROFILER_RETRIES_WAIT("hive.stats.retries.wait",
+        3000),  // # milliseconds to wait before the next retry
+
     // Statistics
     HIVESTATSAUTOGATHER("hive.stats.autogather", true),
     HIVESTATSDBCLASS("hive.stats.dbclass",
@@ -559,6 +578,8 @@ public class HiveConf extends Configuration {
     HIVE_STATS_RELIABLE("hive.stats.reliable", false),
     // Collect table access keys information for operators that can benefit from bucketing
     HIVE_STATS_COLLECT_TABLEKEYS("hive.stats.collect.tablekeys", false),
+    // Collect column access information
+    HIVE_STATS_COLLECT_SCANCOLS("hive.stats.collect.scancols", false),
     // standard error allowed for ndv estimates. A lower value indicates higher accuracy and a
     // higher compute cost.
     HIVE_STATS_NDV_ERROR("hive.stats.ndv.error", (float)20.0),
@@ -608,6 +629,11 @@ public class HiveConf extends Configuration {
         "org.apache.hadoop.hive.ql.security.authorization.DefaultHiveAuthorizationProvider"),
     HIVE_AUTHENTICATOR_MANAGER("hive.security.authenticator.manager",
         "org.apache.hadoop.hive.ql.security.HadoopDefaultAuthenticator"),
+    HIVE_METASTORE_AUTHORIZATION_MANAGER("hive.security.metastore.authorization.manager",
+        "org.apache.hadoop.hive.ql.security.authorization."
+        + "DefaultHiveMetastoreAuthorizationProvider"),
+    HIVE_METASTORE_AUTHENTICATOR_MANAGER("hive.security.metastore.authenticator.manager",
+        "org.apache.hadoop.hive.ql.security.HadoopDefaultMetastoreAuthenticator"),
     HIVE_AUTHORIZATION_TABLE_USER_GRANTS("hive.security.authorization.createtable.user.grants", ""),
     HIVE_AUTHORIZATION_TABLE_GROUP_GRANTS("hive.security.authorization.createtable.group.grants",
         ""),
@@ -631,7 +657,11 @@ public class HiveConf extends Configuration {
     HIVE_CONCATENATE_CHECK_INDEX ("hive.exec.concatenate.check.index", true),
     HIVE_IO_EXCEPTION_HANDLERS("hive.io.exception.handlers", ""),
 
-    //prefix used to auto generated column aliases
+    // logging configuration
+    HIVE_LOG4J_FILE("hive.log4j.file", ""),
+    HIVE_EXEC_LOG4J_FILE("hive.exec.log4j.file", ""),
+
+    // prefix used to auto generated column aliases (this should be started with '_')
     HIVE_AUTOGEN_COLUMNALIAS_PREFIX_LABEL("hive.autogen.columnalias.prefix.label", "_c"),
     HIVE_AUTOGEN_COLUMNALIAS_PREFIX_INCLUDEFUNCNAME(
                                "hive.autogen.columnalias.prefix.includefuncname", false),
@@ -656,6 +686,17 @@ public class HiveConf extends Configuration {
     // outputs are ready
     HIVE_MULTI_INSERT_MOVE_TASKS_SHARE_DEPENDENCIES(
         "hive.multi.insert.move.tasks.share.dependencies", false),
+
+    // If this is set, when writing partitions, the metadata will include the bucketing/sorting
+    // properties with which the data was written if any (this will not overwrite the metadata
+    // inherited from the table if the table is bucketed/sorted)
+    HIVE_INFER_BUCKET_SORT("hive.exec.infer.bucket.sort", false),
+    // If this is set, when setting the number of reducers for the map reduce task which writes the
+    // final output files, it will choose a number which is a power of two.  The number of reducers
+    // may be set to a power of two, only to be followed by a merge task meaning preventing
+    // anything from being inferred.
+    HIVE_INFER_BUCKET_SORT_NUM_BUCKETS_POWER_TWO(
+        "hive.exec.infer.bucket.sort.num.buckets.power.two", false),
 
     /* The following section contains all configurations used for list bucketing feature.*/
     /* This is not for clients. but only for block merge task. */
@@ -1072,10 +1113,6 @@ public class HiveConf extends Configuration {
     return (ret);
   }
 
-  public String getHiveSitePath() {
-    return hiveSiteURL.getPath();
-  }
-
   public String getJar() {
     return hiveJar;
   }
@@ -1093,6 +1130,14 @@ public class HiveConf extends Configuration {
   public void setAuxJars(String auxJars) {
     this.auxJars = auxJars;
     setVar(this, ConfVars.HIVEAUXJARS, auxJars);
+  }
+
+  public URL getHiveDefaultLocation() {
+    return hiveDefaultURL;
+  }
+
+  public URL getHiveSiteLocation() {
+    return hiveSiteURL;
   }
 
   /**

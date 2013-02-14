@@ -97,6 +97,7 @@ public abstract class BaseSemanticAnalyzer {
    */
   protected LineageInfo linfo;
   protected TableAccessInfo tableAccessInfo;
+  protected ColumnAccessInfo columnAccessInfo;
 
   protected static final String TEXTFILE_INPUT = TextInputFormat.class
       .getName();
@@ -399,8 +400,10 @@ public abstract class BaseSemanticAnalyzer {
     for (int propChild = 0; propChild < prop.getChildCount(); propChild++) {
       String key = unescapeSQLString(prop.getChild(propChild).getChild(0)
           .getText());
-      String value = unescapeSQLString(prop.getChild(propChild).getChild(1)
-          .getText());
+      String value = null;
+      if (prop.getChild(propChild).getChild(1) != null) {
+        value = unescapeSQLString(prop.getChild(propChild).getChild(1).getText());
+      }
       mapProp.put(key, value);
     }
   }
@@ -826,6 +829,25 @@ public abstract class BaseSemanticAnalyzer {
    */
   public void setTableAccessInfo(TableAccessInfo tableAccessInfo) {
     this.tableAccessInfo = tableAccessInfo;
+  }
+
+  /**
+   * Gets the column access information.
+   *
+   * @return ColumnAccessInfo associated with the query.
+   */
+  public ColumnAccessInfo getColumnAccessInfo() {
+    return columnAccessInfo;
+  }
+
+  /**
+   * Sets the column access information.
+   *
+   * @param columnAccessInfo The ColumnAccessInfo structure that is set immediately after
+   * the optimization phase.
+   */
+  public void setColumnAccessInfo(ColumnAccessInfo columnAccessInfo) {
+    this.columnAccessInfo = columnAccessInfo;
   }
 
   protected HashMap<String, String> extractPartitionSpecs(Tree partspec)
