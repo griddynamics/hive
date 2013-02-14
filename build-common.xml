@@ -468,6 +468,7 @@
       <sysproperty key="hive.version" value="${version}"/>
       <sysproperty key="java.net.preferIPv4Stack" value="${java.net.preferIPv4Stack}"/>
       <sysproperty key="hadoop.bin.path" value="${test.hadoop.bin.path}${junit.script.extension}"/>
+      <sysproperty key="clover.jar" value="${clover.jar}"/>
       <jvmarg line="${jvm.args}"/>
 
       <classpath refid="test.local.classpath"/>
