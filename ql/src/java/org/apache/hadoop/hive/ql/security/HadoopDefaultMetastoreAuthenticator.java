@@ -16,13 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hive.metastore;
+package org.apache.hadoop.hive.ql.security;
 
-public class TestSetUGIOnOnlyClient extends TestRemoteHiveMetaStore{
+import org.apache.hadoop.hive.metastore.HiveMetaStore.HMSHandler;
+
+public class HadoopDefaultMetastoreAuthenticator extends HadoopDefaultAuthenticator
+  implements HiveMetastoreAuthenticationProvider {
 
   @Override
-  protected void createClient(boolean setugi, int port) throws Exception {
-    // turn it on for client.
-    super.createClient(true, port);
+  public void setMetaStoreHandler(HMSHandler handler) {
+    setConf(handler.getHiveConf());
   }
+
 }

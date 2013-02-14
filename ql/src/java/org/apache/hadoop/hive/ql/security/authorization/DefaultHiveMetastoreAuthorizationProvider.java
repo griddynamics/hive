@@ -16,13 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hive.metastore;
+package org.apache.hadoop.hive.ql.security.authorization;
 
-public class TestSetUGIOnOnlyClient extends TestRemoteHiveMetaStore{
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.metastore.HiveMetaStore.HMSHandler;
+import org.apache.hadoop.hive.ql.metadata.HiveException;
+
+public class DefaultHiveMetastoreAuthorizationProvider extends BitSetCheckedAuthorizationProvider
+  implements HiveMetastoreAuthorizationProvider {
 
   @Override
-  protected void createClient(boolean setugi, int port) throws Exception {
-    // turn it on for client.
-    super.createClient(true, port);
+  public void init(Configuration conf) throws HiveException {
+    hive_db = new HiveProxy();
   }
+
+  @Override
+  public void setMetaStoreHandler(HMSHandler handler) {
+    hive_db.setHandler(handler);
+  }
+
+
 }

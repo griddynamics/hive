@@ -16,13 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hive.metastore;
+package org.apache.hadoop.hive.ql.security.authorization;
 
-public class TestSetUGIOnOnlyClient extends TestRemoteHiveMetaStore{
+import org.apache.hadoop.hive.metastore.HiveMetaStore.HMSHandler;
 
-  @Override
-  protected void createClient(boolean setugi, int port) throws Exception {
-    // turn it on for client.
-    super.createClient(true, port);
-  }
+/**
+ * HiveMetastoreAuthorizationProvider : An extension of HiveAuthorizaytionProvider
+ * that is intended to be called from the metastore-side. It will be invoked
+ * by AuthorizationPreEventListener.
+ *
+ */
+public interface HiveMetastoreAuthorizationProvider extends HiveAuthorizationProvider {
+
+  /**
+   * Allows invoker of HiveMetaStoreAuthorizationProvider to send in a
+   * hive metastore handler that can be used to make calls to test
+   * whether or not authorizations can/will succeed. Intended to be called
+   * before any of the authorize methods are called.
+   * @param handler
+   */
+  void setMetaStoreHandler(HMSHandler handler);
+
 }
