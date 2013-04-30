@@ -24,8 +24,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -57,6 +59,7 @@ public class HiveConf extends Configuration {
   private static byte[] confVarByteArray = null;
 
   private static final Map<String, ConfVars> vars = new HashMap<String, ConfVars>();
+  private final List<String> restrictList = new ArrayList<String>();
 
   static {
     ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -128,6 +131,8 @@ public class HiveConf extends Configuration {
       HiveConf.ConfVars.HMSHANDLERATTEMPTS,
       HiveConf.ConfVars.HMSHANDLERINTERVAL,
       HiveConf.ConfVars.HMSHANDLERFORCERELOADCONF,
+      HiveConf.ConfVars.METASTORE_PARTITION_NAME_WHITELIST_PATTERN,
+      HiveConf.ConfVars.METASTORE_DISALLOW_INCOMPATIBLE_COL_TYPE_CHANGES
       };
 
   /**
@@ -142,6 +147,16 @@ public class HiveConf extends Configuration {
     HiveConf.ConfVars.HADOOPJT,
     HiveConf.ConfVars.METASTOREWAREHOUSE,
     HiveConf.ConfVars.SCRATCHDIR
+  };
+
+  /**
+   * The conf variables that depends on current user
+   */
+  public static final HiveConf.ConfVars[] userVars = {
+    HiveConf.ConfVars.SCRATCHDIR,
+    HiveConf.ConfVars.LOCALSCRATCHDIR,
+    HiveConf.ConfVars.DOWNLOADED_RESOURCES_DIR,
+    HiveConf.ConfVars.HIVEHISTORYFILELOC
   };
 
   /**
@@ -176,7 +191,6 @@ public class HiveConf extends Configuration {
     PREEXECHOOKS("hive.exec.pre.hooks", ""),
     POSTEXECHOOKS("hive.exec.post.hooks", ""),
     ONFAILUREHOOKS("hive.exec.failure.hooks", ""),
-    OPERATORHOOKS("hive.exec.operator.hooks", ""),
     CLIENTSTATSPUBLISHERS("hive.client.stats.publishers", ""),
     EXECPARALLEL("hive.exec.parallel", false), // parallel query launching
     EXECPARALLETHREADNUMBER("hive.exec.parallel.thread.number", 8),
@@ -208,6 +222,9 @@ public class HiveConf extends Configuration {
     // if true, DROP TABLE/VIEW does not fail if table/view doesn't exist and IF EXISTS is
     // not specified
     DROPIGNORESNONEXISTENT("hive.exec.drop.ignorenonexistent", true),
+
+    // ignore the mapjoin hint
+    HIVEIGNOREMAPJOINHINT("hive.ignore.mapjoin.hint", true),
 
     // Hadoop Configuration Properties
     // Properties with null values are ignored and exist only for the purpose of giving us
@@ -323,7 +340,8 @@ public class HiveConf extends Configuration {
     METASTORE_EXECUTE_SET_UGI("hive.metastore.execute.setugi", false),
     METASTORE_PARTITION_NAME_WHITELIST_PATTERN(
         "hive.metastore.partition.name.whitelist.pattern", ""),
-
+    METASTORE_DISALLOW_INCOMPATIBLE_COL_TYPE_CHANGES(
+        "hive.metastore.disallow.incompatible.col.type.changes", false),
 
     // Default parameters for creating tables
     NEWTABLEDEFAULTPARA("hive.table.parameters.default", ""),
@@ -397,8 +415,6 @@ public class HiveConf extends Configuration {
     HIVEJOINEMITINTERVAL("hive.join.emit.interval", 1000),
     HIVEJOINCACHESIZE("hive.join.cache.size", 25000),
     HIVEMAPJOINBUCKETCACHESIZE("hive.mapjoin.bucket.cache.size", 100),
-    HIVEMAPJOINROWSIZE("hive.mapjoin.size.key", 10000),
-    HIVEMAPJOINCACHEROWS("hive.mapjoin.cache.numrows", 25000),
     HIVEGROUPBYMAPINTERVAL("hive.groupby.mapaggr.checkinterval", 100000),
     HIVEMAPAGGRHASHMEMORY("hive.map.aggr.hash.percentmemory", (float) 0.5),
     HIVEMAPJOINFOLLOWEDBYMAPAGGRHASHMEMORY("hive.mapjoin.followby.map.aggr.hash.percentmemory", (float) 0.3),
@@ -406,6 +422,7 @@ public class HiveConf extends Configuration {
     HIVEMAPAGGRHASHMINREDUCTION("hive.map.aggr.hash.min.reduction", (float) 0.5),
     HIVEMULTIGROUPBYSINGLEREDUCER("hive.multigroupby.singlereducer", true),
     HIVE_MAP_GROUPBY_SORT("hive.map.groupby.sorted", false),
+    HIVE_MAP_GROUPBY_SORT_TESTMODE("hive.map.groupby.sorted.testmode", false),
     HIVE_GROUPBY_ORDERBY_POSITION_ALIAS("hive.groupby.orderby.position.alias", false),
     HIVE_NEW_JOB_GROUPING_SET_CARDINALITY("hive.new.job.grouping.set.cardinality", 30),
 
@@ -467,12 +484,17 @@ public class HiveConf extends Configuration {
         "hive.merge.current.job.has.dynamic.partitions", false),
 
     HIVEUSEEXPLICITRCFILEHEADER("hive.exec.rcfile.use.explicit.header", true),
+    HIVEUSERCFILESYNCCACHE("hive.exec.rcfile.use.sync.cache", true),
+
+    // Maximum fraction of heap that can be used by ORC file writers
+    HIVE_ORC_FILE_MEMORY_POOL("hive.exec.orc.memory.pool", 0.5f), // 50%
 
     HIVESKEWJOIN("hive.optimize.skewjoin", false),
-    HIVECONVERTJOIN("hive.auto.convert.join", false),
-    HIVECONVERTJOINNOCONDITIONALTASK("hive.auto.convert.join.noconditionaltask", false),
+    HIVECONVERTJOIN("hive.auto.convert.join", true),
+    HIVECONVERTJOINNOCONDITIONALTASK("hive.auto.convert.join.noconditionaltask", true),
     HIVECONVERTJOINNOCONDITIONALTASKTHRESHOLD("hive.auto.convert.join.noconditionaltask.size",
         10000000L),
+    HIVEOPTIMIZEMAPJOINFOLLOWEDBYMR("hive.optimize.mapjoin.mapreduce", false),
     HIVESKEWJOINKEY("hive.skewjoin.key", 100000),
     HIVESKEWJOINMAPJOINNUMMAPTASK("hive.skewjoin.mapjoin.map.tasks", 10000),
     HIVESKEWJOINMAPJOINMINSPLIT("hive.skewjoin.mapjoin.min.split", 33554432L), //32M
@@ -496,9 +518,17 @@ public class HiveConf extends Configuration {
 
     HIVEENFORCEBUCKETING("hive.enforce.bucketing", false),
     HIVEENFORCESORTING("hive.enforce.sorting", false),
+    HIVEOPTIMIZEBUCKETINGSORTING("hive.optimize.bucketingsorting", true),
     HIVEPARTITIONER("hive.mapred.partitioner", "org.apache.hadoop.hive.ql.io.DefaultHivePartitioner"),
     HIVEENFORCESORTMERGEBUCKETMAPJOIN("hive.enforce.sortmergebucketmapjoin", false),
     HIVEENFORCEBUCKETMAPJOIN("hive.enforce.bucketmapjoin", false),
+
+    HIVE_AUTO_SORTMERGE_JOIN("hive.auto.convert.sortmerge.join", false),
+    HIVE_AUTO_SORTMERGE_JOIN_BIGTABLE_SELECTOR(
+        "hive.auto.convert.sortmerge.join.bigtable.selection.policy",
+        "org.apache.hadoop.hive.ql.optimizer.AvgPartitionSizeBasedBigTableSelectorForAutoSMJ"),
+    HIVE_AUTO_SORTMERGE_JOIN_TOMAPJOIN(
+        "hive.auto.convert.sortmerge.join.to.mapjoin", false),
 
     HIVESCRIPTOPERATORTRUST("hive.exec.script.trust", false),
     HIVEROWOFFSET("hive.exec.rowoffset", false),
@@ -519,6 +549,7 @@ public class HiveConf extends Configuration {
     HIVEOPTBUCKETMAPJOIN("hive.optimize.bucketmapjoin", false), // optimize bucket map join
     HIVEOPTSORTMERGEBUCKETMAPJOIN("hive.optimize.bucketmapjoin.sortedmerge", false), // try to use sorted merge bucket map join
     HIVEOPTREDUCEDEDUPLICATION("hive.optimize.reducededuplication", true),
+    HIVEOPTREDUCEDEDUPLICATIONMINREDUCER("hive.optimize.reducededuplication.min.reducer", 4),
     // whether to optimize union followed by select followed by filesink
     // It creates sub-directories in the final output, so should not be turned on in systems
     // where MAPREDUCE-1501 is not present
@@ -538,18 +569,6 @@ public class HiveConf extends Configuration {
     HIVE_INDEX_COMPACT_QUERY_MAX_ENTRIES("hive.index.compact.query.max.entries", (long) 10000000), // 10M
     HIVE_INDEX_COMPACT_QUERY_MAX_SIZE("hive.index.compact.query.max.size", (long) 10 * 1024 * 1024 * 1024), // 10G
     HIVE_INDEX_COMPACT_BINARY_SEARCH("hive.index.compact.binary.search", true),
-
-    //Profiler
-    HIVEPROFILERDBCLASS("hive.profiler.dbclass","jdbc:derby"),
-    HIVEPROFILERJDBCDRIVER("hive.profiler.jdbcdriver", "org.apache.derby.jdbc.EmbeddedDriver"),
-    HIVEPROFILERDBCONNECTIONSTRING("hive.profiler.dbconnectionstring",
-        "jdbc:derby:;databaseName=TempProfilerStore;create=true"), // automatically create database
-    // default timeout for JDBC connection
-    HIVE_PROFILER_JDBC_TIMEOUT("hive.profiler.jdbc.timeout", 30),
-    HIVE_PROFILER_RETRIES_MAX("hive.stats.retries.max",
-        0),     // maximum # of retries to insert/select/delete the stats DB
-    HIVE_PROFILER_RETRIES_WAIT("hive.stats.retries.wait",
-        3000),  // # milliseconds to wait before the next retry
 
     // Statistics
     HIVESTATSAUTOGATHER("hive.stats.autogather", true),
@@ -584,6 +603,7 @@ public class HiveConf extends Configuration {
     // higher compute cost.
     HIVE_STATS_NDV_ERROR("hive.stats.ndv.error", (float)20.0),
     HIVE_STATS_KEY_PREFIX_MAX_LENGTH("hive.stats.key.prefix.max.length", 200),
+    HIVE_STATS_KEY_PREFIX("hive.stats.key.prefix", ""), // internal usage only
 
     // Concurrency
     HIVE_SUPPORT_CONCURRENCY("hive.support.concurrency", false),
@@ -682,6 +702,24 @@ public class HiveConf extends Configuration {
     HIVE_DDL_OUTPUT_FORMAT("hive.ddl.output.format", null),
     HIVE_ENTITY_SEPARATOR("hive.entity.separator", "@"),
 
+    HIVE_SERVER2_THRIFT_MIN_WORKER_THREADS("hive.server2.thrift.min.worker.threads", 5),
+    HIVE_SERVER2_THRIFT_MAX_WORKER_THREADS("hive.server2.thrift.max.worker.threads", 100),
+
+    HIVE_SERVER2_THRIFT_PORT("hive.server2.thrift.port", 10000),
+    HIVE_SERVER2_THRIFT_BIND_HOST("hive.server2.thrift.bind.host", ""),
+
+
+    // HiveServer2 auth configuration
+    HIVE_SERVER2_AUTHENTICATION("hive.server2.authentication", "NONE"),
+    HIVE_SERVER2_KERBEROS_KEYTAB("hive.server2.authentication.kerberos.keytab", ""),
+    HIVE_SERVER2_KERBEROS_PRINCIPAL("hive.server2.authentication.kerberos.principal", ""),
+    HIVE_SERVER2_PLAIN_LDAP_URL("hive.server2.authentication.ldap.url", null),
+    HIVE_SERVER2_PLAIN_LDAP_BASEDN("hive.server2.authentication.ldap.baseDN", null),
+    HIVE_SERVER2_CUSTOM_AUTHENTICATION_CLASS("hive.server2.custom.authentication.class", null),
+    HIVE_SERVER2_ENABLE_DOAS("hive.server2.enable.doAs", true),
+
+    HIVE_CONF_RESTRICTED_LIST("hive.conf.restricted.list", null),
+
     // If this is set all move tasks at the end of a multi-insert query will only begin once all
     // outputs are ready
     HIVE_MULTI_INSERT_MOVE_TASKS_SHARE_DEPENDENCIES(
@@ -719,6 +757,12 @@ public class HiveConf extends Configuration {
 
     // Whether to show the unquoted partition names in query results.
     HIVE_DECODE_PARTITION_NAME("hive.decode.partition.name", false),
+
+    // ptf partition constants
+    HIVE_PTF_PARTITION_PERSISTENCE_CLASS("hive.ptf.partition.persistence",
+      "org.apache.hadoop.hive.ql.exec.PTFPersistence$PartitionedByteBasedList"),
+    HIVE_PTF_PARTITION_PERSISTENT_SIZE("hive.ptf.partition.persistence.memsize",
+      (int) Math.pow(2, (5 + 10 + 10)) ), // 32MB
     ;
 
     public final String varname;
@@ -862,6 +906,13 @@ public class HiveConf extends Configuration {
       }
     }
     return new LoopingByteArrayInputStream(confVarByteArray);
+  }
+
+  public void verifyAndSet(String name, String value) throws IllegalArgumentException {
+    if (restrictList.contains(name)) {
+      throw new IllegalArgumentException("Cann't modify " + name + " at runtime");
+    }
+    set(name, value);
   }
 
   public static int getIntVar(Configuration conf, ConfVars var) {
@@ -1051,7 +1102,17 @@ public class HiveConf extends Configuration {
     if (auxJars == null) {
       auxJars = this.get(ConfVars.HIVEAUXJARS.varname);
     }
+
+    // setup list of conf vars that are not allowed to change runtime
+    String restrictListStr = this.get(ConfVars.HIVE_CONF_RESTRICTED_LIST.toString());
+    if (restrictListStr != null) {
+      for (String entry : restrictListStr.split(",")) {
+        restrictList.add(entry);
+      }
+    }
+    restrictList.add(ConfVars.HIVE_CONF_RESTRICTED_LIST.toString());
   }
+
 
   /**
    * Apply system properties to this object if the property name is defined in ConfVars

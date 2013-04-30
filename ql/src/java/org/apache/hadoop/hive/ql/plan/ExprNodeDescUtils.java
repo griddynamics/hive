@@ -93,13 +93,51 @@ public class ExprNodeDescUtils {
 
   /**
    * bind two predicates by AND op
-    */
+   */
   public static ExprNodeDesc mergePredicates(ExprNodeDesc prev, ExprNodeDesc next) {
     List<ExprNodeDesc> children = new ArrayList<ExprNodeDesc>(2);
     children.add(prev);
     children.add(next);
     return new ExprNodeGenericFuncDesc(TypeInfoFactory.booleanTypeInfo,
         FunctionRegistry.getGenericUDFForAnd(), children);
+  }
+
+  /**
+   * bind n predicates by AND op
+   */
+  public static ExprNodeDesc mergePredicates(List<ExprNodeDesc> exprs) {
+    ExprNodeDesc prev = null;
+    for (ExprNodeDesc expr : exprs) {
+      if (prev == null) {
+        prev = expr;
+        continue;
+      }
+      prev = mergePredicates(prev, expr);
+    }
+    return prev;
+  }
+
+  /**
+   * split predicates by AND op
+   */
+  public static List<ExprNodeDesc> split(ExprNodeDesc current) {
+    return split(current, new ArrayList<ExprNodeDesc>());
+  }
+
+  /**
+   * split predicates by AND op
+   */
+  public static List<ExprNodeDesc> split(ExprNodeDesc current, List<ExprNodeDesc> splitted) {
+    if (FunctionRegistry.isOpAnd(current)) {
+      for (ExprNodeDesc child : current.getChildren()) {
+        split(child, splitted);
+      }
+      return splitted;
+    }
+    if (indexOf(current, splitted) < 0) {
+      splitted.add(current);
+    }
+    return splitted;
   }
 
   /**
@@ -118,6 +156,25 @@ public class ExprNodeDescUtils {
   }
 
   /**
+   * Return false if the expression has any non determinitic function
+   */
+  public static boolean isDeterministic(ExprNodeDesc desc) {
+    if (desc instanceof ExprNodeGenericFuncDesc) {
+      if (!FunctionRegistry.isDeterministic(((ExprNodeGenericFuncDesc)desc).getGenericUDF())) {
+        return false;
+      }
+    }
+    if (desc.getChildren() != null) {
+      for (ExprNodeDesc child : desc.getChildren()) {
+        if (!isDeterministic(child)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
    * Convert expressions in current operator to those in terminal operator, which
    * is an ancestor of current or null (back to top operator).
    */
@@ -130,9 +187,10 @@ public class ExprNodeDescUtils {
     return result;
   }
 
-  private static ExprNodeDesc backtrack(ExprNodeDesc source, Operator<?> current,
+  public static ExprNodeDesc backtrack(ExprNodeDesc source, Operator<?> current,
       Operator<?> terminal) throws SemanticException {
-    if (current == null || current == terminal) {
+    Operator<?> parent = getSingleParent(current, terminal);
+    if (parent == null) {
       return source;
     }
     if (source instanceof ExprNodeGenericFuncDesc) {
@@ -143,7 +201,7 @@ public class ExprNodeDescUtils {
     }
     if (source instanceof ExprNodeColumnDesc) {
       ExprNodeColumnDesc column = (ExprNodeColumnDesc) source;
-      return backtrack(column, current, terminal);
+      return backtrack(column, parent, terminal);
     }
     if (source instanceof ExprNodeFieldDesc) {
       // field epression should be resolved
@@ -158,20 +216,19 @@ public class ExprNodeDescUtils {
   // Resolve column expression to input expression by using expression mapping in current operator
   private static ExprNodeDesc backtrack(ExprNodeColumnDesc column, Operator<?> current,
       Operator<?> terminal) throws SemanticException {
-    if (current == null || current == terminal) {
-      return column;
-    }
-    Operator<?> parent = getSingleParent(current, terminal);
     Map<String, ExprNodeDesc> mapping = current.getColumnExprMap();
     if (mapping == null || !mapping.containsKey(column.getColumn())) {
-      return backtrack(column, parent, terminal);  // forward
+      return backtrack((ExprNodeDesc)column, current, terminal);
     }
     ExprNodeDesc mapped = mapping.get(column.getColumn());
-    return backtrack(mapped, parent, terminal);    // forward with resolved expr
+    return backtrack(mapped, current, terminal);
   }
 
-  private static Operator<?> getSingleParent(Operator<?> current, Operator<?> terminal)
+  public static Operator<?> getSingleParent(Operator<?> current, Operator<?> terminal)
       throws SemanticException {
+    if (current == terminal) {
+      return null;
+    }
     List<Operator<?>> parents = current.getParentOperators();
     if (parents == null || parents.isEmpty()) {
       if (terminal != null) {
@@ -179,9 +236,12 @@ public class ExprNodeDescUtils {
       }
       return null;
     }
-    if (current.getParentOperators().size() > 1) {
-      throw new SemanticException("Met multiple parent operators");
+    if (parents.size() == 1) {
+      return parents.get(0);
     }
-    return parents.get(0);
+    if (terminal != null && parents.contains(terminal)) {
+      return terminal;
+    }
+    throw new SemanticException("Met multiple parent operators");
   }
 }

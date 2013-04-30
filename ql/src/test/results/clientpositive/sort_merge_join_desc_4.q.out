@@ -85,7 +85,7 @@ STAGE PLANS:
                   type: boolean
               HashTable Sink Operator
                 condition expressions:
-                  0 {key}
+                  0 
                   1 
                 handleSkewJoin: false
                 keys:
@@ -107,32 +107,26 @@ STAGE PLANS:
                 condition map:
                      Inner Join 0 to 1
                 condition expressions:
-                  0 {key}
+                  0 
                   1 
                 handleSkewJoin: false
                 keys:
                   0 [Column[key], Column[value]]
                   1 [Column[key], Column[value]]
-                outputColumnNames: _col0
                 Position of Big Table: 0
                 Select Operator
-                  expressions:
-                        expr: _col0
-                        type: string
-                  outputColumnNames: _col0
-                  Select Operator
-                    Group By Operator
-                      aggregations:
-                            expr: count()
-                      bucketGroup: false
-                      mode: hash
-                      outputColumnNames: _col0
-                      Reduce Output Operator
-                        sort order: 
-                        tag: -1
-                        value expressions:
-                              expr: _col0
-                              type: bigint
+                  Group By Operator
+                    aggregations:
+                          expr: count()
+                    bucketGroup: false
+                    mode: hash
+                    outputColumnNames: _col0
+                    Reduce Output Operator
+                      sort order: 
+                      tag: -1
+                      value expressions:
+                            expr: _col0
+                            type: bigint
       Local Work:
         Map Reduce Local Work
       Reduce Operator Tree:

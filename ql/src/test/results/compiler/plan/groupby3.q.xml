@@ -2,7 +2,7 @@
 #### A masked pattern was here #### 
  <object class="org.apache.hadoop.hive.ql.exec.MapRedTask"> 
   <void property="id"> 
-   <string>Stage-4</string> 
+   <string>Stage-1</string> 
   </void> 
   <void property="work"> 
    <object class="org.apache.hadoop.hive.ql.plan.MapredWork"> 
@@ -630,7 +630,7 @@
                     <void method="add"> 
                      <object class="org.apache.hadoop.hive.ql.plan.AggregationDesc"> 
                       <void property="genericUDAFEvaluator"> 
-                       <object id="GenericUDAFAverage$GenericUDAFAverageEvaluator0" class="org.apache.hadoop.hive.ql.udf.generic.GenericUDAFAverage$GenericUDAFAverageEvaluator"/> 
+                       <object id="GenericUDAFAverage$GenericUDAFAverageEvaluatorDouble0" class="org.apache.hadoop.hive.ql.udf.generic.GenericUDAFAverage$GenericUDAFAverageEvaluatorDouble"/> 
                       </void> 
                       <void property="genericUDAFName"> 
                        <string>avg</string> 
@@ -697,7 +697,7 @@
                        <boolean>true</boolean> 
                       </void> 
                       <void property="genericUDAFEvaluator"> 
-                       <object id="GenericUDAFAverage$GenericUDAFAverageEvaluator1" class="org.apache.hadoop.hive.ql.udf.generic.GenericUDAFAverage$GenericUDAFAverageEvaluator"/> 
+                       <object id="GenericUDAFAverage$GenericUDAFAverageEvaluatorDouble1" class="org.apache.hadoop.hive.ql.udf.generic.GenericUDAFAverage$GenericUDAFAverageEvaluatorDouble"/> 
                       </void> 
                       <void property="genericUDAFName"> 
                        <string>avg</string> 
@@ -887,6 +887,9 @@
                      </object> 
                     </void> 
                    </object> 
+                  </void> 
+                  <void property="distinct"> 
+                   <boolean>true</boolean> 
                   </void> 
                   <void property="groupByMemoryUsage"> 
                    <float>0.5</float> 
@@ -1520,6 +1523,9 @@
                 <void property="statsAggPrefix"> 
                  #### A masked pattern was here #### 
                 </void> 
+                <void property="statsCollectRawDataSize"> 
+                 <boolean>true</boolean> 
+                </void> 
                 <void property="tableInfo"> 
                  <object class="org.apache.hadoop.hive.ql.plan.TableDesc"> 
                   <void property="deserializerClass"> 
@@ -1919,7 +1925,7 @@
           <void method="add"> 
            <object class="org.apache.hadoop.hive.ql.plan.AggregationDesc"> 
             <void property="genericUDAFEvaluator"> 
-             <object idref="GenericUDAFAverage$GenericUDAFAverageEvaluator0"/> 
+             <object idref="GenericUDAFAverage$GenericUDAFAverageEvaluatorDouble0"/> 
             </void> 
             <void property="genericUDAFName"> 
              <string>avg</string> 
@@ -1949,7 +1955,7 @@
              <boolean>true</boolean> 
             </void> 
             <void property="genericUDAFEvaluator"> 
-             <object idref="GenericUDAFAverage$GenericUDAFAverageEvaluator1"/> 
+             <object idref="GenericUDAFAverage$GenericUDAFAverageEvaluatorDouble1"/> 
             </void> 
             <void property="genericUDAFName"> 
              <string>avg</string> 
@@ -2030,6 +2036,9 @@
            </object> 
           </void> 
          </object> 
+        </void> 
+        <void property="distinct"> 
+         <boolean>true</boolean> 
         </void> 
         <void property="groupByMemoryUsage"> 
          <float>0.5</float> 

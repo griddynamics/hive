@@ -76,6 +76,7 @@ import org.apache.hadoop.hive.metastore.api.PrivilegeBag;
 import org.apache.hadoop.hive.metastore.api.Role;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.SkewedInfo;
+import org.apache.hadoop.hive.metastore.api.SkewedValueList;
 import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.index.HiveIndexHandler;
@@ -180,6 +181,10 @@ public class Hive {
       hiveDB.set(db);
     }
     return db;
+  }
+
+  public static void set(Hive hive) {
+    hiveDB.set(hive);
   }
 
   public static void closeCurrent() {
@@ -1216,8 +1221,8 @@ public class Hive {
           org.apache.hadoop.hive.metastore.api.Partition newCreatedTpart = newTPart.getTPartition();
           SkewedInfo skewedInfo = newCreatedTpart.getSd().getSkewedInfo();
           /* Construct list bucketing location mappings from sub-directory name. */
-          Map<List<String>, String> skewedColValueLocationMaps = constructListBucketingLocationMap(
-              newPartPath, skewedInfo);
+          Map<SkewedValueList, String> skewedColValueLocationMaps =
+            constructListBucketingLocationMap(newPartPath, skewedInfo);
           /* Add list bucketing location mappings. */
           skewedInfo.setSkewedColValueLocationMaps(skewedColValueLocationMaps);
           newCreatedTpart.getSd().setSkewedInfo(skewedInfo);
@@ -1250,7 +1255,8 @@ public class Hive {
  * @throws IOException
  */
 private void walkDirTree(FileStatus fSta, FileSystem fSys,
-    Map<List<String>, String> skewedColValueLocationMaps, Path newPartPath, SkewedInfo skewedInfo)
+    Map<SkewedValueList, String> skewedColValueLocationMaps,
+    Path newPartPath, SkewedInfo skewedInfo)
     throws IOException {
   /* Base Case. It's leaf. */
   if (!fSta.isDir()) {
@@ -1276,7 +1282,7 @@ private void walkDirTree(FileStatus fSta, FileSystem fSys,
  * @param skewedInfo
  */
 private void constructOneLBLocationMap(FileStatus fSta,
-    Map<List<String>, String> skewedColValueLocationMaps,
+    Map<SkewedValueList, String> skewedColValueLocationMaps,
     Path newPartPath, SkewedInfo skewedInfo) {
   Path lbdPath = fSta.getPath().getParent();
   List<String> skewedValue = new ArrayList<String>();
@@ -1299,7 +1305,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
   }
   if ((skewedValue.size() > 0) && (skewedValue.size() == skewedInfo.getSkewedColNames().size())
       && !skewedColValueLocationMaps.containsKey(skewedValue)) {
-    skewedColValueLocationMaps.put(skewedValue, lbdPath.toString());
+    skewedColValueLocationMaps.put(new SkewedValueList(skewedValue), lbdPath.toString());
   }
 }
 
@@ -1312,9 +1318,10 @@ private void constructOneLBLocationMap(FileStatus fSta,
    * @throws IOException
    * @throws FileNotFoundException
    */
-  private Map<List<String>, String> constructListBucketingLocationMap(Path newPartPath,
+  private Map<SkewedValueList, String> constructListBucketingLocationMap(Path newPartPath,
       SkewedInfo skewedInfo) throws IOException, FileNotFoundException {
-    Map<List<String>, String> skewedColValueLocationMaps = new HashMap<List<String>, String>();
+    Map<SkewedValueList, String> skewedColValueLocationMaps =
+      new HashMap<SkewedValueList, String>();
     FileSystem fSys = newPartPath.getFileSystem(conf);
     walkDirTree(fSys.getFileStatus(newPartPath), fSys, skewedColValueLocationMaps, newPartPath,
         skewedInfo);
@@ -1355,6 +1362,12 @@ private void constructOneLBLocationMap(FileStatus fSta,
           // No leaves in this directory
           LOG.info("NOT moving empty directory: " + s.getPath());
         } else {
+          try {
+            validatePartitionNameCharacters(
+                Warehouse.getPartValuesFromPartName(s.getPath().getParent().toString()));
+          } catch (MetaException e) {
+            throw new HiveException(e);
+          }
           validPartitions.add(s.getPath().getParent());
         }
       }
@@ -1658,7 +1671,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
     List<String> names = null;
     Table t = getTable(dbName, tblName);
 
-    List<String> pvals = getPvals(t.getPartCols(), partSpec);
+    List<String> pvals = MetaStoreUtils.getPvals(t.getPartCols(), partSpec);
 
     try {
       names = getMSC().listPartitionNames(dbName, tblName, pvals, max);
@@ -1700,19 +1713,6 @@ private void constructOneLBLocationMap(FileStatus fSta,
     }
   }
 
-  private static List<String> getPvals(List<FieldSchema> partCols,
-      Map<String, String> partSpec) {
-    List<String> pvals = new ArrayList<String>();
-    for (FieldSchema field : partCols) {
-      String val = partSpec.get(field.getName());
-      if (val == null) {
-        val = "";
-      }
-      pvals.add(val);
-    }
-    return pvals;
-  }
-
   /**
    * get all the partitions of the table that matches the given partial
    * specification. partition columns whose value is can be anything should be
@@ -1732,7 +1732,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
           "partitioned table");
     }
 
-    List<String> partialPvals = getPvals(tbl.getPartCols(), partialPartSpec);
+    List<String> partialPvals = MetaStoreUtils.getPvals(tbl.getPartCols(), partialPartSpec);
 
     List<org.apache.hadoop.hive.metastore.api.Partition> partitions = null;
     try {
@@ -1871,6 +1871,15 @@ private void constructOneLBLocationMap(FileStatus fSta,
       results.add(part);
     }
     return results;
+  }
+
+  public void validatePartitionNameCharacters(List<String> partVals) throws HiveException {
+    try {
+      getMSC().validatePartitionNameCharacters(partVals);
+    } catch (Exception e) {
+      LOG.error(StringUtils.stringifyException(e));
+      throw new HiveException(e);
+    }
   }
 
   /**
@@ -2229,6 +2238,18 @@ private void constructOneLBLocationMap(FileStatus fSta,
     }
   }
 
+  public void exchangeTablePartitions(Map<String, String> partitionSpecs,
+      String sourceDb, String sourceTable, String destDb,
+      String destinationTableName) throws HiveException {
+    try {
+      getMSC().exchange_partition(partitionSpecs, sourceDb, sourceTable, destDb,
+        destinationTableName);
+    } catch (Exception ex) {
+      LOG.error(StringUtils.stringifyException(ex));
+      throw new HiveException(ex);
+    }
+  }
+
   /**
    * Creates a metastore client. Currently it creates only JDBC based client as
    * File based store support is removed
@@ -2391,6 +2412,26 @@ private void constructOneLBLocationMap(FileStatus fSta,
         e.printStackTrace();
       }
       throw new HiveException("Invalid table name: " + tableName);
+    }
+  }
+
+  public String getDelegationToken(String owner, String renewer)
+    throws HiveException{
+    try {
+      return getMSC().getDelegationToken(owner, renewer);
+    } catch(Exception e) {
+      LOG.error(StringUtils.stringifyException(e));
+      throw new HiveException(e);
+    }
+  }
+
+  public void cancelDelegationToken(String tokenStrForm)
+    throws HiveException {
+    try {
+      getMSC().cancelDelegationToken(tokenStrForm);
+    }  catch(Exception e) {
+      LOG.error(StringUtils.stringifyException(e));
+      throw new HiveException(e);
     }
   }
 

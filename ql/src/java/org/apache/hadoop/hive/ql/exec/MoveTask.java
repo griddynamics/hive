@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.ql.Context;
@@ -393,6 +394,9 @@ public class MoveTask extends Task<MoveWork> implements Serializable {
             }
             dc = null; // reset data container to prevent it being added again.
           } else { // static partitions
+            List<String> partVals = MetaStoreUtils.getPvals(table.getPartCols(),
+                tbd.getPartitionSpec());
+            db.validatePartitionNameCharacters(partVals);
             db.loadPartition(new Path(tbd.getSourceDir()), tbd.getTable().getTableName(),
                 tbd.getPartitionSpec(), tbd.getReplace(), tbd.getHoldDDLTime(),
                 tbd.getInheritTableSpecs(), isSkewedStoredAsDirs(tbd));

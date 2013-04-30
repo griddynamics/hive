@@ -2,7 +2,7 @@
 #### A masked pattern was here #### 
  <object class="org.apache.hadoop.hive.ql.exec.MapRedTask"> 
   <void property="id"> 
-   <string>Stage-4</string> 
+   <string>Stage-1</string> 
   </void> 
   <void property="work"> 
    <object class="org.apache.hadoop.hive.ql.plan.MapredWork"> 
@@ -693,6 +693,9 @@
                     </void> 
                    </object> 
                   </void> 
+                  <void property="distinct"> 
+                   <boolean>true</boolean> 
+                  </void> 
                   <void property="groupByMemoryUsage"> 
                    <float>0.5</float> 
                   </void> 
@@ -1321,6 +1324,9 @@
                 <void property="statsAggPrefix"> 
                  #### A masked pattern was here #### 
                 </void> 
+                <void property="statsCollectRawDataSize"> 
+                 <boolean>true</boolean> 
+                </void> 
                 <void property="tableInfo"> 
                  <object class="org.apache.hadoop.hive.ql.plan.TableDesc"> 
                   <void property="deserializerClass"> 
@@ -1707,6 +1713,9 @@
            </object> 
           </void> 
          </object> 
+        </void> 
+        <void property="distinct"> 
+         <boolean>true</boolean> 
         </void> 
         <void property="groupByMemoryUsage"> 
          <float>0.5</float> 

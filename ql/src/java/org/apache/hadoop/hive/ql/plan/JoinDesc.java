@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql.plan;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -79,6 +80,10 @@ public class JoinDesc extends AbstractOperatorDesc {
 
   protected Byte[] tagOrder;
   private TableDesc keyTableDesc;
+
+  // this operator cannot be converted to mapjoin cause output is expected to be sorted on join key
+  // it's resulted from RS-dedup optimization, which removes following RS under some condition
+  private boolean fixedAsSorted;
 
   public JoinDesc() {
   }
@@ -506,5 +511,30 @@ public class JoinDesc extends AbstractOperatorDesc {
       }
     }
     return null;
+  }
+
+  public int getTagLength() {
+    int tagLength = -1;
+    for (byte tag : getExprs().keySet()) {
+      tagLength = Math.max(tagLength, tag + 1);
+    }
+    return tagLength;
+  }
+
+  @SuppressWarnings("unchecked")
+  public <T> T[] convertToArray(Map<Byte, T> source, Class<T> compType) {
+    T[] result = (T[]) Array.newInstance(compType, getTagLength());
+    for (Map.Entry<Byte, T> entry : source.entrySet()) {
+      result[entry.getKey()] = entry.getValue();
+    }
+    return result;
+  }
+
+  public boolean isFixedAsSorted() {
+    return fixedAsSorted;
+  }
+
+  public void setFixedAsSorted(boolean fixedAsSorted) {
+    this.fixedAsSorted = fixedAsSorted;
   }
 }

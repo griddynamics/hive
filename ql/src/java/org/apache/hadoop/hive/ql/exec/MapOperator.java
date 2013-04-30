@@ -85,7 +85,6 @@ public class MapOperator extends Operator<MapredWork> implements Serializable, C
   // convert from partition to table schema
   private transient Converter partTblObjectInspectorConverter;
   private transient boolean isPartitioned;
-  private transient boolean hasVC;
   private Map<MapInputPath, MapOpCtx> opCtxMap;
   private final Set<MapInputPath> listInputPaths = new HashSet<MapInputPath>();
 
@@ -139,7 +138,6 @@ public class MapOperator extends Operator<MapredWork> implements Serializable, C
     public void setOp(Operator<? extends OperatorDesc> op) {
       this.op = op;
     }
-
   }
 
   private static class MapOpCtx {
@@ -353,7 +351,6 @@ public class MapOperator extends Operator<MapredWork> implements Serializable, C
       if (tsDesc != null) {
         this.vcs = tsDesc.getVirtualCols();
         if (vcs != null && vcs.size() > 0) {
-          this.hasVC = true;
           List<String> vcNames = new ArrayList<String>(vcs.size());
           this.vcValues = new Writable[vcs.size()];
           List<ObjectInspector> vcsObjectInspectors = new ArrayList<ObjectInspector>(vcs.size());
@@ -470,8 +467,8 @@ public class MapOperator extends Operator<MapredWork> implements Serializable, C
 
   public void setChildren(Configuration hconf) throws HiveException {
 
-    Path fpath = new Path((new Path(HiveConf.getVar(hconf,
-        HiveConf.ConfVars.HADOOPMAPFILENAME))).toUri().getPath());
+    Path fpath = new Path(HiveConf.getVar(hconf,
+        HiveConf.ConfVars.HADOOPMAPFILENAME));
 
     ArrayList<Operator<? extends OperatorDesc>> children =
       new ArrayList<Operator<? extends OperatorDesc>>();
@@ -483,7 +480,7 @@ public class MapOperator extends Operator<MapredWork> implements Serializable, C
     try {
       for (String onefile : conf.getPathToAliases().keySet()) {
         MapOpCtx opCtx = initObjectInspector(conf, hconf, onefile, convertedOI);
-        Path onepath = new Path(new Path(onefile).toUri().getPath());
+        Path onepath = new Path(onefile);
         List<String> aliases = conf.getPathToAliases().get(onefile);
 
         for (String onealias : aliases) {
@@ -515,7 +512,7 @@ public class MapOperator extends Operator<MapredWork> implements Serializable, C
         // didn't find match for input file path in configuration!
         // serious problem ..
         LOG.error("Configuration does not have any alias for path: "
-            + fpath.toUri().getPath());
+            + fpath.toUri());
         throw new HiveException("Configuration and input path are inconsistent");
       }
 
@@ -617,7 +614,7 @@ public class MapOperator extends Operator<MapredWork> implements Serializable, C
 
     Object row = null;
     try {
-      if (this.hasVC) {
+      if (null != this.rowWithPartAndVC) {
         this.rowWithPartAndVC[0] =
             partTblObjectInspectorConverter.convert(deserializer.deserialize(value));
         int vcPos = isPartitioned ? 2 : 1;
@@ -649,7 +646,7 @@ public class MapOperator extends Operator<MapredWork> implements Serializable, C
     // The row has been converted to comply with table schema, irrespective of partition schema.
     // So, use tblOI (and not partOI) for forwarding
     try {
-      if (this.hasVC) {
+      if (null != this.rowWithPartAndVC) {
         forward(this.rowWithPartAndVC, this.tblRowObjectInspector);
       } else if (!isPartitioned) {
         forward(row, tblRowObjectInspector);
@@ -660,7 +657,7 @@ public class MapOperator extends Operator<MapredWork> implements Serializable, C
       // Serialize the row and output the error message.
       String rowString;
       try {
-        if (this.hasVC) {
+        if (null != rowWithPartAndVC) {
           rowString = SerDeUtils.getJSONString(rowWithPartAndVC, tblRowObjectInspector);
         } else if (!isPartitioned) {
           rowString = SerDeUtils.getJSONString(row, tblRowObjectInspector);
