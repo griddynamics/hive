@@ -326,7 +326,7 @@
   </target>
 
   <target name="clover-reports">
-      <iterate target="gen-clover-report" failonerror="false"/>
+      <iterate target="gen-clover-report" iterate="${iterate.hive.all}" failonerror="false"/>
   </target>
   
   <fileset dir="${basedir}" id="clover.report.fileset">
