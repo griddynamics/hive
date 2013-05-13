@@ -60,6 +60,14 @@
   <property name="md5sum.format" value="{0}  {1}"/>
   <property name="test.ignore.failures" value="false"/>
 
+  <!-- Check minimum ant version required -->
+  <fail message="Please use ant version 1.8.0 or greater for building hive.">
+    <condition>
+      <not>
+        <antversion atleast="1.8.0"/>
+      </not>
+    </condition>
+  </fail>
 
   <condition property="is-offline" value="true" else="false">
     <isset property="offline"/>
@@ -69,6 +77,10 @@
 
   <condition property="staging">
     <equals arg1="${mvn.publish.repo}" arg2="staging"/>
+  </condition>
+
+  <condition property="test.halt.on.failure" value="no" else="yes">
+    <equals arg1="${test.continue.on.failure}" arg2="true"/>
   </condition>
 
   <taskdef resource="net/sf/antcontrib/antcontrib.properties">
@@ -295,7 +307,7 @@
     <condition property="target.module" value="${module}" else="${iterate.hive.test}">
       <isset property="module"/>
     </condition>
-    <for list="${target.module}" param="module">
+    <for keepgoing="${test.continue.on.failure}" list="${target.module}" param="module">
       <sequential>
         <trycatch property="failure.message">
           <try>
@@ -318,7 +330,7 @@
 
   <target name="test-shims">
     <echo message="Project: ${ant.project.name}"/>
-    <subant target="test" failonerror="${failonerror}">
+    <subant target="test" failonerror="${test.halt.on.failure}">
       <property name="hadoop.version" value="${hadoop.security.version}"/>
       <property name="hadoop.security.version" value="${hadoop.security.version}"/>
       <fileset dir="${hive.root}/shims" includes="build.xml"/>
@@ -563,8 +575,8 @@
     <!-- Package the hcat stuff and pull it up into Hive's build dir -->
     <ant antfile="${hive.root}/hcatalog/build.xml" target="package"
         inheritAll="false"/>
-    <mkdir dir="${build.dir.hive}/hcatalog"/>
-    <copy todir="${build.dir.hive}/hcatalog">
+    <mkdir dir="${target.dir}/hcatalog"/>
+    <copy todir="${target.dir}/hcatalog">
         <fileset dir="${hive.root}/hcatalog/build/hcatalog-${hcatalog.version}"/>
     </copy>
   </target>
@@ -768,6 +780,7 @@
         <tarfileset dir="${hive.root}" mode="664" prefix="${tar.final.name}/src"
                     excludes="${vcs.excludes}">
           <exclude name="build/**" />
+          <exclude name="hcatalog/**/build/**" />
           <exclude name="bin/**" />
           <exclude name="**/py/**/*-remote" />
           <exclude name="data/scripts/**" />
@@ -777,6 +790,7 @@
         <tarfileset dir="${hive.root}" mode="755" prefix="${tar.final.name}/src"
                     excludes="${vcs.excludes}">
           <exclude name="build/**" />
+          <exclude name="hcatalog/**/build/**" />
           <include name="bin/**" />
           <include name="**/py/**/*-remote" />
           <include name="data/scripts/**" />
@@ -806,9 +820,6 @@
           <exclude name="bin/**"/>
           <exclude name="docs/**"/>
           <exclude name="lib/py/**/*-remote"/>
-        </tarfileset>
-        <tarfileset dir="${build.dir.hive}/hcatalog" mode="755" prefix="${bin.final.name}"
-                    excludes="${vcs.excludes}">
         </tarfileset>
       </param.listofitems>
     </macro_tar>
