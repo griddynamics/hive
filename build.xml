@@ -149,7 +149,7 @@
 
   <macrodef name="iterate">
     <attribute name="target"/>
-    <attribute name="failonerror"/>
+    <attribute name="failonerror" default="false"/>
     <sequential>
         <subant target="@{target}" failonerror="@{failonerror}">
         <property name="build.dir.hive" location="${build.dir.hive}"/>
@@ -325,19 +325,19 @@
       </path>
       <sequential>
         <trycatch property="failure.message">
-            <try>
-                <ant antfile="@{file}" target="test" inheritAll="false" inheritRefs="true">
-                    <property name="build.dir.hive" location="${build.dir.hive}"/>
-                    <property name="is-offline" value="${is-offline}"/>
-                </ant>
-            </try>
-            <catch>
-                <fail message="${failure.message}">
-                    <condition>
-                        <isfalse value="${test.ignore.failures}"/>
-                    </condition>
-                </fail>
-            </catch>
+          <try>
+            <ant antfile="@{file}" target="test" inheritAll="false" inheritRefs="true">
+              <property name="build.dir.hive" location="${build.dir.hive}"/>
+              <property name="is-offline" value="${is-offline}"/>
+            </ant>
+          </try>
+          <catch>
+            <fail message="${failure.message}">
+              <condition>
+                <isfalse value="${test.ignore.failures}"/>
+              </condition>
+            </fail>
+          </catch>
         </trycatch>
       </sequential>
     </for>
