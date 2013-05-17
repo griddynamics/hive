@@ -132,26 +132,26 @@
   <import file="build-offline.xml"/>
 
   <condition property="clover.enabled">
-      <isset property="clover.jar"/>
+    <isset property="clover.jar"/>
   </condition>
 
   <target name="with.clover" if="clover.enabled">
-      <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
-      <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
-          <fileset dir="src" includes="**/*.java"/>
-      </clover-setup>
+    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
+      <fileset dir="src" includes="**/*.java"/>
+    </clover-setup>
   </target>
 
   <target name="gen-clover-report" depends="with.clover">
-      <mkdir dir="${build.dir.hive}/clover/report/html"/>
-      <mkdir dir="${build.dir.hive}/clover/report/html/${ant.project.name}"/>
-      <clover-report>
-          <current outfile="${build.dir.hive}/clover/report/${ant.project.name}/html" title="${ant.project.name}">
-              <format type="html"/>
-          </current>
-      </clover-report>
-      <clover-pdf-report outfile="${build.dir.hive}/clover/report/${ant.project.name}.pdf" title="${ant.project.name}">
-      </clover-pdf-report>
+    <mkdir dir="${build.dir.hive}/clover/report/html"/>
+    <mkdir dir="${build.dir.hive}/clover/report/html/${ant.project.name}"/>
+    <clover-report>
+      <current outfile="${build.dir.hive}/clover/report/${ant.project.name}/html" title="${ant.project.name}">
+        <format type="html"/>
+      </current>
+    </clover-report>
+    <clover-pdf-report outfile="${build.dir.hive}/clover/report/${ant.project.name}.pdf" title="${ant.project.name}">
+    </clover-pdf-report>
   </target>
 
   <!--this is the naming policy for artifacts we want pulled down-->
@@ -514,12 +514,12 @@
       </assertions>
     </junit>
     <fail message="Tests failed!">
-        <condition>
-            <and>
-                <isfalse value="${test.ignore.failures}"/>
-                <istrue value="${tests.failed}"/>
-            </and>
-        </condition>
+      <condition>
+        <and>
+          <isfalse value="${test.ignore.failures}"/>
+          <istrue value="${tests.failed}"/>
+        </and>
+      </condition>
     </fail>
   </target>
 
