@@ -367,6 +367,7 @@
       <clover-merge initString="hive-clover.db">
           <cloverDbSet dir="${build.dir.hive}">
               <include name="**/clover.db"/>
+              <include name="**/clover-baseline.db"/>
           </cloverDbSet>
       </clover-merge>
       <mkdir dir="${build.dir.hive}/clover/report/html"/>
