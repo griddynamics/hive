@@ -169,6 +169,8 @@
     <!-- Test Dependencies -->
     <dependency org="junit" name="junit" rev="${junit.version}" conf="test->default" />
 
+    <exclude org="com.cenqua.clover" module="clover"/>
+
     <conflict manager="all" />
   </dependencies>
 </ivy-module>

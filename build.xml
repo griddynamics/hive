@@ -58,6 +58,7 @@
   <property name="checkstyle.build.dir" location="${build.dir.hive}/checkstyle"/>
   <property name="rat.build.dir" location="${build.dir.hive}/rat"/>
   <property name="md5sum.format" value="{0}  {1}"/>
+  <property name="test.ignore.failures" value="false"/>
   <!-- Properties for maven repositories -->
   <property name="mvn.staging.repo.id" value="apache.staging.https"/>
   <property name="mvn.staging.repo.url"
@@ -104,6 +105,7 @@
   <macrodef name="iterate">
     <attribute name="target"/>
     <attribute name="iterate"/>
+    <attribute name="failonerror" default="false"/>
     <sequential>
       <if>
         <isset property="module"/>
@@ -112,7 +114,7 @@
       </if>
       <for list="${target.module}" param="module">
         <sequential>
-          <subant buildpath="@{module}/build.xml" target="@{target}">
+          <subant buildpath="@{module}/build.xml" target="@{target}" failonerror="@{failonerror}">
             <property name="is-offline" value="${is-offline}"/>
             <property name="thrift.home" value="${thrift.home}"/>
             <property name="build.dir.hive" location="${build.dir.hive}"/>
@@ -254,7 +256,7 @@
 
   <target name="compile" depends="compile-cpp">
     <echo message="Project: ${ant.project.name}"/>
-    <iterate target="compile" iterate="${iterate.hive.modules}"/>
+    <iterate target="compile" iterate="${iterate.hive.modules}" failonerror="true"/>
   </target>
 
   <target name="thriftif">
@@ -271,7 +273,7 @@
           depends="init"
           description="Build JAR artifacts">
     <echo message="Project: ${ant.project.name}"/>
-    <iterate target="jar" iterate="${iterate.hive.modules}"/>
+    <iterate target="jar" iterate="${iterate.hive.modules}" failonerror="true"/>
   </target>
 
   <target name="gen-test" depends="jar" description="Generate tests">
@@ -297,12 +299,23 @@
     <condition property="target.module" value="${module}" else="${iterate.hive.test}">
       <isset property="module"/>
     </condition>
-    <for list="${target.module}" param="module">
+    <for keepgoing="${test.continue.on.failure}" list="${target.module}" param="module">
       <sequential>
-        <ant antfile="@{module}/build.xml" target="test" inheritAll="false" inheritRefs="true">
-          <property name="build.dir.hive" location="${build.dir.hive}"/>
-          <property name="is-offline" value="${is-offline}"/>
-        </ant>
+        <trycatch property="failure.message">
+          <try>
+            <ant antfile="@{module}/build.xml" target="test" inheritAll="false" inheritRefs="true">
+              <property name="build.dir.hive" location="${build.dir.hive}"/>
+              <property name="is-offline" value="${is-offline}"/>
+            </ant>
+          </try>
+          <catch>
+            <fail message="${failure.message}">
+              <condition>
+                <isfalse value="${test.ignore.failures}"/>
+              </condition>
+            </fail>
+          </catch>
+        </trycatch>
       </sequential>
     </for>
   </target>
@@ -314,6 +327,50 @@
       <property name="hadoop.security.version" value="${hadoop.security.version}"/>
       <fileset dir="${hive.root}/shims" includes="build.xml"/>
     </subant>
+  </target>
+
+  <target name="clover-reports">
+    <iterate target="gen-clover-report" iterate="${iterate.hive.all}" failonerror="false"/>
+  </target>
+
+  <fileset dir="${basedir}" id="clover.report.fileset">
+    <include name="**/*.java"/>
+    <exclude name="**/hive/metastore/api/**/*.java"/>
+    <exclude name="**/hive/ql/plan/api/**/*.java"/>
+    <exclude name="**/hive/serde2.dynamic_type/**/*.java"/>
+    <exclude name="**/hive/serde2/dynamic_type/*.java"/>
+    <exclude name="**/hive/service/*.java"/>
+    <exclude name="**/hive/serde2/thrift/test/*.java"/>
+    <exclude name="**/hive/serde/test/*.java"/>
+    <exclude name="**/hive/**/example/**/*.java"/>
+    <exclude name="**/hive/serde2/thrift_test/*.java"/>
+    <exclude name="**/hive/contrib/serde2/*.java"/>
+    <exclude name="**/hive/contrib/serde2/s3/*.java"/>
+    <exclude name="**/hive/contrib/util/typedbytes/*.java"/>
+    <exclude name="**/hive/hwi/*.java"/>
+    <exclude name="**/hive/jdbc/*.java"/>
+    <exclude name="**/hive/scripts/*.java"/>
+    <exclude name="**/hive/pdk/*.java"/>
+  </fileset>
+
+  <target name="clover-aggregate">
+    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    <clover-merge initString="hive-clover.db">
+      <cloverDbSet dir="${build.dir.hive}">
+        <include name="**/clover.db"/>
+      </cloverDbSet>
+    </clover-merge>
+    <mkdir dir="${build.dir.hive}/clover/report/html"/>
+    <clover-report initstring="hive-clover.db">
+      <current outfile="${build.dir.hive}/clover/report/html" title="Hive">
+        <fileset refid="clover.report.fileset"/>
+        <format type="html"/>
+      </current>
+      <current outfile="${build.dir.hive}/clover/report/report.xml" title="Hive">
+        <fileset refid="clover.report.fileset"/>
+        <format type="xml"/>
+      </current>
+    </clover-report>
   </target>
 
   <!-- create an html report from junit output files -->
@@ -332,7 +389,7 @@
   <target name="clean-test"
           description="Clean test results">
     <echo message="Project: ${ant.project.name}"/>
-    <iterate target="clean-test" iterate="${iterate.hive.modules}"/>
+    <iterate target="clean-test" iterate="${iterate.hive.modules}" failonerror="true"/>
     <delete dir="${build.dir.hive}/test"/>
     <delete dir="${hive.root}/ql/TempStatsStore"/>
   </target>
@@ -340,8 +397,8 @@
   <target name="clean"
           description="Clean build artifacts">
     <echo message="Project: ${ant.project.name}"/>
-    <iterate target="clean" iterate="${iterate.hive.all}"/>
-    <iterate target="clean" iterate="${iterate.hive.cpp}"/>
+    <iterate target="clean" iterate="${iterate.hive.all}" failonerror="false"/>
+    <iterate target="clean" iterate="${iterate.hive.cpp}" failonerror="false"/>
     <delete dir="${target.dir}"/>
     <antcall target="clean-online"/>
     <antcall target="clean-offline"/>
@@ -1040,7 +1097,7 @@
     <mkdir dir="${mvn.license.dir}" />
 
     <!-- call make pom on all projects that have ivy.xml -->
-    <iterate target="make-pom" iterate="${iterate.hive.all}"/>
+    <iterate target="make-pom" iterate="${iterate.hive.all}" failonerror="false"/>
 
     <!-- copy the jars  -->
     <copy file="${build.dir.hive}/anttasks/hive-anttasks-${version}.jar"

@@ -66,6 +66,7 @@
   <property name="test.serialize.qplan" value="false"/>
   <property name="test.print.classpath" value="false"/>
   <property name="test.lang" value="en_US.UTF-8"/>
+  <property name="test.ignore.failures" value="false"/>
 
   <property name="hadoop.opts.23" value="-D mapreduce.framework.name=local" />
   <property name="hadoop.opts.20" value="" />
@@ -76,7 +77,7 @@
     <distinctelementsclasspath id="test.classpath">
       <pathelement location="${test.build.classes}" />
       <pathelement location="${test.build.resources}" />
-      <pathelement location="" />
+      <pathelement location="${clover.jar}" />
       <pathelement location="${test.src.data.dir}/conf"/>
       <pathelement location="${hive.conf.dir}"/>
       <pathelement location="${build.dir.hive}/beeline/test/classes"/>
@@ -125,6 +126,29 @@
     <istrue value="${is-offline}"/>
   </condition>
   <import file="build-offline.xml"/>
+
+  <condition property="clover.enabled">
+    <isset property="clover.jar"/>
+  </condition>
+
+  <target name="with.clover" if="clover.enabled">
+    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
+      <fileset dir="src" includes="**/*.java"/>
+    </clover-setup>
+  </target>
+
+  <target name="gen-clover-report" depends="with.clover">
+    <mkdir dir="${build.dir.hive}/clover/report/html"/>
+    <mkdir dir="${build.dir.hive}/clover/report/html/${ant.project.name}"/>
+    <clover-report>
+      <current outfile="${build.dir.hive}/clover/report/${ant.project.name}/html" title="${ant.project.name}">
+        <format type="html"/>
+      </current>
+    </clover-report>
+    <clover-pdf-report outfile="${build.dir.hive}/clover/report/${ant.project.name}.pdf" title="${ant.project.name}">
+    </clover-pdf-report>
+  </target>
 
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.artifact.retrieve.pattern" value="[conf]/[artifact]-[revision](-[classifier]).[ext]"/>
@@ -184,6 +208,7 @@
   <!-- the normal classpath -->
   <path id="common-classpath">
     <pathelement location="${build.dir.hive}/classes"/>
+    <pathelement location="${clover.jar}" />
     <fileset dir="${build.dir.hive}" includes="*/*.jar"/>
     <fileset dir="${hive.root}/lib" includes="*.jar"/>
     <fileset dir="${build.ivy.lib.dir}/default" includes="junit*.jar" />
@@ -226,7 +251,7 @@
     </copy>
   </target>
 
-  <target name="init" depends="create-dirs">
+  <target name="init" depends="create-dirs, with.clover">
     <echo message="Project: ${ant.project.name}"/>
   </target>
 
@@ -463,6 +488,7 @@
       <sysproperty key="java.net.preferIPv4Stack" value="${java.net.preferIPv4Stack}"/>
       <sysproperty key="hadoop.bin.path" value="${test.hadoop.bin.path}${junit.script.extension}"/>
       <sysproperty key="test.concurrency.num.threads" value="${test.concurrency.num.threads}"/>
+      <sysproperty key="clover.jar" value="${clover.jar}"/>
       <jvmarg line="${junit.jvm.args}"/>
 
       <classpath refid="test.local.classpath"/>
@@ -479,7 +505,14 @@
         <enable />
       </assertions>
     </junit>
-    <fail if="tests.failed">Tests failed!</fail>
+    <fail message="Tests failed!">
+      <condition>
+        <and>
+          <isfalse value="${test.ignore.failures}"/>
+          <istrue value="${tests.failed}"/>
+        </and>
+      </condition>
+    </fail>
   </target>
 
   <target name="clean-test">
