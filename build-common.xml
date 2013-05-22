@@ -427,9 +427,35 @@
   <property name="fs.default.name" value="file:///"/>
 
   <!-- target to run the tests -->
-  <target name="test"
-    depends="test-conditions,gen-test,compile-test,test-jar,test-init">
+  <target name="test" depends="test-conditions,gen-test,compile-test,test-jar,test-init">
     <echo message="Project: ${ant.project.name}"/>
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+      <classpath>
+        <pathelement location="${hive.root}/testlibs/ant-contrib-1.0b3.jar"/>
+      </classpath>
+    </taskdef>
+    <foreach target="execute.test" maxthreads="6" inheritall="true" inheritrefs="true" parallel="true" param="test.source.absolute">
+      <path>
+        <fileset dir="${test.build.classes}">
+          <include unless="testcase" name="**/${test.include}.class"/>
+          <exclude unless="testcase" name="**/TestSerDe.class,**/TestHiveMetaStore.class,**/TestBeeLineDriver.class,**/TestHiveServer2Concurrency.class,**/*$*.class,${test.junit.exclude}"/>
+
+          <include if="testcase" name="**/${testcase}.class"/>
+        </fileset>
+      </path>
+    </foreach>
+  </target>
+
+  <!-- target to run ONE test -->
+  <target name="run-one-test">
+    <!--depends="test-conditions,gen-test,compile-test,test-jar,test-init">-->
+    <!--<echo message="Project: ${ant.project.name}"/>-->
+    <!-- we need to have relative path -->
+    <pathconvert property="test.source.relative">
+      <fileset file="${test.source.absolute}" />
+      <map from="${test.build.classes}/" to="" />
+    </pathconvert>
+
     <property name="hadoop.testcp" refid="test.classpath"/>
     <if>
       <equals arg1="${hadoop.mr.rev}" arg2="23" />
@@ -501,6 +527,7 @@
 
       <classpath refid="test.local.classpath"/>
       <formatter type="${test.junit.output.format}" usefile="${test.junit.output.usefile}" />
+<!--
       <batchtest todir="${test.build.dir}" unless="testcase">
         <fileset dir="${test.build.classes}"
                  includes="**/${test.include}.class"
@@ -508,6 +535,10 @@
       </batchtest>
       <batchtest todir="${test.build.dir}" if="testcase">
         <fileset dir="${test.build.classes}" includes="**/${testcase}.class"/>
+      </batchtest>
+-->
+      <batchtest todir="${test.build.dir}">
+        <fileset dir="${test.build.classes}" includes="${test.source.relative}"/>
       </batchtest>
       <assertions>
         <enable />
