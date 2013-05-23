@@ -353,14 +353,6 @@
     <exclude name="**/hive/pdk/*.java"/>
   </fileset>
 
-  <clover-columns id="clover.columns">
-      <totalChildren/>
-      <filteredElements/>
-      <avgMethodComplexity/>
-      <uncoveredElements format="raw"/>
-      <totalPercentageCovered format="longbar"/>
-  </clover-columns>
-
   <target name="clover-aggregate">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
     <typedef resource="cloverlib.xml" classpath="${clover.jar}"/>
