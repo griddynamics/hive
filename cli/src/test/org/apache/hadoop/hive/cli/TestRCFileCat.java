@@ -109,7 +109,7 @@ public class TestRCFileCat {
 
     } finally {
       System.setOut(oldOutPrintStream);
-      System.setErr(oldOutPrintStream);
+      System.setErr(oldErrPrintStream);
       RCFileCat.test=false;
 
     }

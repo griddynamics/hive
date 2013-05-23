@@ -146,11 +146,6 @@ public class TestCliDriverMethods extends TestCase {
     assertTrue(dataErr.toString().contains("Hive history file="));
     assertTrue(dataErr.toString().contains("File: fakeFile is not a file."));
 
-    System.out.println("1----------------------");
-    System.out.println("" + dataOut.toString());
-    System.out.println("2----------------------");
-    System.out.println("" + dataErr.toString());
-    System.out.println("3----------------------" + dataErr.toString().length());
   }
 
   private static class FakeCliDriver extends CliDriver {
