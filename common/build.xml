@@ -67,7 +67,10 @@ to call at top-level: ant deploy-contrib compile-core-test
                  excludes="**/*$*.class,${test.junit.exclude}" />
       </batchtest>
       <batchtest todir="${test.build.dir}" if="testcase">
-        <fileset dir="${test.build.classes}" includes="**/${testcase}.class"/>
+        <fileset dir="${test.build.classes}">
+          <include name="**/${testcase}.class"/>
+          <exclude name="${test.junit.exclude}"/>
+        </fileset>
       </batchtest>
       <assertions>
         <enable />

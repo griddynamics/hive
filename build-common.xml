@@ -507,7 +507,10 @@
                  excludes="**/TestSerDe.class,**/TestHiveMetaStore.class,**/TestBeeLineDriver.class,**/TestHiveServer2Concurrency.class,**/*$*.class,${test.junit.exclude}" />
       </batchtest>
       <batchtest todir="${test.build.dir}" if="testcase">
-        <fileset dir="${test.build.classes}" includes="**/${testcase}.class"/>
+        <fileset dir="${test.build.classes}">
+          <include name="**/${testcase}.class"/>
+          <exclude name="${test.junit.exclude}"/>
+        </fileset>
       </batchtest>
       <assertions>
         <enable />
