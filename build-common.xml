@@ -139,6 +139,7 @@
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
     <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
       <fileset dir="src" includes="**/*.java"/>
+      <fileset dir="../build" includes="**/*.java"/>
     </clover-setup>
   </target>
 
