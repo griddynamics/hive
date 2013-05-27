@@ -7,6 +7,6 @@ FROM
 (
   FROM table
   SELECT TRANSFORM (table.string)
-  USING 'java -cp ../build/ql/test/classes org.apache.hadoop.hive.scripts.extracturl' AS (table, count)
+  USING 'java -cp ../build/ql/test/classes:${system:clover.jar} org.apache.hadoop.hive.scripts.extracturl' AS (table, count)
 ) subq
 GROUP BY table;
