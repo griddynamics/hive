@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hive.cli;
 
+
 import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -31,14 +34,19 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.security.Permission;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import jline.ArgumentCompletor;
 import jline.Completor;
 import jline.ConsoleReader;
 import junit.framework.TestCase;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
@@ -47,6 +55,10 @@ import org.apache.hadoop.hive.metastore.api.Schema;
 import org.apache.hadoop.hive.ql.CommandNeedRetryException;
 import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
+import org.apache.hadoop.hive.service.HiveClient;
+import org.apache.hadoop.hive.service.HiveServerException;
+import org.apache.thrift.TException;
+
 
 // Cannot call class TestCliDriver since that's the name of the generated
 // code for the script-based testing
@@ -148,6 +160,157 @@ public class TestCliDriverMethods extends TestCase {
 
   }
 
+  /**
+   * Test commands exit and quit
+   */
+  public void testQuit() throws Exception {
+
+    CliSessionState ss = new CliSessionState(new HiveConf());
+    ss.err = System.err;
+    ss.out = System.out;
+
+    NoExitSecurityManager newSecurityManager = new NoExitSecurityManager();
+    System.setSecurityManager(newSecurityManager);
+    try {
+      CliSessionState.start(ss);
+      CliDriver cliDriver = new CliDriver();
+      cliDriver.processCmd("quit");
+      fail("should be exit");
+    } catch (ExitException e) {
+      assertEquals(0, e.getStatus());
+
+    } catch (Exception e) {
+      newSecurityManager.resetSecurityManager();
+      throw e;
+    }
+
+    try {
+      CliSessionState.start(ss);
+      CliDriver cliDriver = new CliDriver();
+      cliDriver.processCmd("exit");
+      fail("should be exit");
+    } catch (ExitException e) {
+      assertEquals(0, e.getStatus());
+
+    } finally {
+      newSecurityManager.resetSecurityManager();
+    }
+
+  }
+
+  /**
+   * test remote execCommand
+   */
+  public void testRemoteCall() throws Exception {
+    MyCliSessionState ss = new MyCliSessionState(new HiveConf(),
+        org.apache.hadoop.hive.cli.TestCliDriverMethods.MyCliSessionState.ClientResult.RETURN_OK);
+    ss.err = System.err;
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    ss.out = new PrintStream(data);
+    MyCliSessionState.start(ss);
+
+    CliDriver cliDriver = new CliDriver();
+    cliDriver.processCmd("remote command");
+    assertTrue(data.toString().contains("test result"));
+
+  }
+
+  /**
+   * test remote Exception
+   */
+  public void testServerException() throws Exception {
+    MyCliSessionState ss = new MyCliSessionState(
+        new HiveConf(),
+        org.apache.hadoop.hive.cli.TestCliDriverMethods.MyCliSessionState.ClientResult.RETURN_SERVER_EXCEPTION);
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    ss.err = new PrintStream(data);
+    ss.out = System.out;
+    MyCliSessionState.start(ss);
+
+    CliDriver cliDriver = new CliDriver();
+    cliDriver.processCmd("remote command");
+    assertTrue(data.toString().contains("[Hive Error]: test HiveServerException"));
+
+  }
+
+  /**
+   * test remote Exception
+   */
+  public void testServerTException() throws Exception {
+    MyCliSessionState ss = new MyCliSessionState(
+        new HiveConf(),
+        org.apache.hadoop.hive.cli.TestCliDriverMethods.MyCliSessionState.ClientResult.RETURN_T_EXCEPTION);
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    ss.err = new PrintStream(data);
+    ss.out = System.out;
+    MyCliSessionState.start(ss);
+
+    CliDriver cliDriver = new CliDriver();
+    cliDriver.processCmd("remote command");
+    assertTrue(data.toString().contains("[Thrift Error]: test TException"));
+    assertTrue(data.toString().contains(
+        "[Thrift Error]: Hive server is not cleaned due to thrift exception: test TException"));
+
+  }
+
+  public void testprocessInitFiles() throws Exception {
+    String oldHiveHome = System.getenv("HIVE_HOME");
+    String oldHiveConfDir = System.getenv("HIVE_CONF_DIR");
+
+    File homeFile = File.createTempFile("test", "hive");
+    String tmpDir = homeFile.getParentFile().getAbsoluteFile() + File.separator
+        + "TestCliDriverMethods";
+    homeFile.delete();
+    FileUtils.deleteDirectory(new File(tmpDir));
+    homeFile = new File(tmpDir + File.separator + "bin" + File.separator + CliDriver.HIVERCFILE);
+    homeFile.getParentFile().mkdirs();
+    homeFile.createNewFile();
+    FileUtils.write(homeFile, "-- init hive file for test ");
+    setEnv("HIVE_HOME", homeFile.getParentFile().getParentFile().getAbsolutePath());
+    setEnv("HIVE_CONF_DIR", homeFile.getParentFile().getAbsolutePath());
+    CliSessionState ss = new CliSessionState(new HiveConf());
+
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+
+    ss.err = new PrintStream(data);
+    ss.out = System.out;
+    try {
+      CliSessionState.start(ss);
+      CliDriver cliDriver = new CliDriver();
+      cliDriver.processInitFiles(ss);
+      assertTrue(data
+          .toString()
+          .contains(
+              "Putting the global hiverc in $HIVE_HOME/bin/.hiverc is deprecated. Please use $HIVE_CONF_DIR/.hiverc instead."));
+    } finally {
+      // restore data
+      setEnv("HIVE_HOME", oldHiveHome);
+      setEnv("HIVE_CONF_DIR", oldHiveConfDir);
+      FileUtils.deleteDirectory(new File(tmpDir));
+    }
+
+  }
+
+
+  private static void setEnv(String key, String value) throws Exception {
+    Class[] classes = Collections.class.getDeclaredClasses();
+    Map<String, String> env = (Map<String, String>) System.getenv();
+    for (Class cl : classes) {
+      if ("java.util.Collections$UnmodifiableMap".equals(cl.getName())) {
+        Field field = cl.getDeclaredField("m");
+        field.setAccessible(true);
+        Object obj = field.get(env);
+        Map<String, String> map = (Map<String, String>) obj;
+        if (value == null) {
+          map.remove(key);
+        } else {
+          map.put(key, value);
+        }
+      }
+    }
+  }
+
+
   private static class FakeCliDriver extends CliDriver {
 
     @Override
@@ -204,6 +367,110 @@ public class TestCliDriverMethods extends TestCase {
         return null;
       }
     }
+  }
+
+  private static class NoExitSecurityManager extends SecurityManager {
+
+    public SecurityManager parentSecurityManager;
+
+    public NoExitSecurityManager() {
+      super();
+      parentSecurityManager = System.getSecurityManager();
+
+    }
+
+    @Override
+    public void checkPermission(Permission perm, Object context) {
+      if (parentSecurityManager != null) {
+        parentSecurityManager.checkPermission(perm, context);
+      }
+    }
+
+    @Override
+    public void checkPermission(Permission perm) {
+      if (parentSecurityManager != null) {
+        parentSecurityManager.checkPermission(perm);
+      }
+    }
+
+    @Override
+    public void checkExit(int status) {
+      throw new ExitException(status);
+    }
+
+    public void resetSecurityManager() {
+      System.setSecurityManager(parentSecurityManager);
+    }
+  }
+
+  private static class ExitException extends RuntimeException {
+    int status;
+
+    public ExitException(int status) {
+      this.status = status;
+    }
+
+    public int getStatus() {
+      return status;
+    }
+  }
+
+  private static class MyCliSessionState extends CliSessionState {
+
+    public enum ClientResult {
+      RETURN_OK, RETURN_SERVER_EXCEPTION, RETURN_T_EXCEPTION
+    };
+
+    private final ClientResult result;
+
+    public MyCliSessionState(HiveConf conf, ClientResult result) {
+      super(conf);
+      this.result = result;
+    }
+
+    @Override
+    public boolean isRemoteMode() {
+      return true;
+    }
+
+    @Override
+    public HiveClient getClient() {
+
+      HiveClient result = mock(HiveClient.class);
+      if (ClientResult.RETURN_OK.equals(this.result)) {
+        List<String> fetchResult = new ArrayList<String>(1);
+        fetchResult.add("test result");
+        try {
+          when(result.fetchN(anyInt())).thenReturn(fetchResult);
+        } catch (HiveServerException e) {
+        } catch (Exception e) {
+        }
+      } else if (ClientResult.RETURN_SERVER_EXCEPTION.equals(this.result)) {
+        HiveServerException exception = new HiveServerException("test HiveServerException", 10,
+            "sql state");
+        try {
+          when(result.fetchN(anyInt())).thenThrow(exception);
+
+          when(result.fetchN(anyInt())).thenThrow(exception);
+        } catch (TException e) {
+          ;
+        }
+        return result;
+      } else if (ClientResult.RETURN_T_EXCEPTION.equals(this.result)) {
+        TException exception = new TException("test TException");
+        try {
+          // org.mockito.Mockito.
+          doThrow(exception).when(result).clean();
+          when(result.fetchN(anyInt())).thenThrow(exception);
+        } catch (TException e) {
+          e.printStackTrace();
+        }
+        return result;
+      }
+      return result;
+    }
 
   }
+
+
 }
