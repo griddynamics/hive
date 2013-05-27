@@ -138,9 +138,9 @@
   <target name="with.clover" if="clover.enabled">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
     <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
-      <fileset dir="src" includes="**/*.java"/>
+      <!-- <fileset dir="src" includes="**/*.java"/> -->
       <!-- NB: IvanVeselovsky, 24 May 2013: this fileset enables instrumentation of tests generated from Velocity macro: -->
-      <fileset dir="../build" includes="**/*.java"/>
+      <!-- <fileset dir="../build" includes="**/*.java"/> -->
     </clover-setup>
   </target>
 
@@ -506,7 +506,7 @@
       <batchtest todir="${test.build.dir}" unless="testcase">
         <fileset dir="${test.build.classes}"
                  includes="**/${test.include}.class"
-                 excludes="**/TestSerDe.class,**/TestHiveMetaStore.class,**/TestBeeLineDriver.class,**/TestHiveServer2Concurrency.class,**/*$*.class,${test.junit.exclude}" />
+                 excludes="**/TestSerDe.class,**/TestHiveMetaStore.class,**/TestBeeLineDriver*.class,**/TestHiveServer2Concurrency.class,**/*$*.class,${test.junit.exclude}" />
       </batchtest>
       <batchtest todir="${test.build.dir}" if="testcase">
         <fileset dir="${test.build.classes}">
