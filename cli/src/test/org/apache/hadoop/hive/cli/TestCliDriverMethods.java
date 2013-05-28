@@ -37,6 +37,7 @@ import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.security.Permission;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -102,6 +103,7 @@ public class TestCliDriverMethods extends TestCase {
     CliDriver cliDriver = new CliDriver();
 
     // We want the driver to try to print the header...
+
     Configuration conf = mock(Configuration.class);
     when(conf.getBoolean(eq(ConfVars.HIVE_CLI_PRINT_HEADER.varname), anyBoolean()))
         .thenReturn(true);
@@ -131,11 +133,30 @@ public class TestCliDriverMethods extends TestCase {
     assertEquals(2, completors.length);
     assertTrue(completors[0] instanceof ArgumentCompletor);
     assertTrue(completors[1] instanceof Completor);
+
+    //comletor add space after last delimeter
+   List<String>testList=new ArrayList<String>(Arrays.asList(new String[]{")"}));
+    completors[1].complete("fdsdfsdf", 0, testList);
+    assertEquals(") ", testList.get(0));
+    testList=new ArrayList<String>();
+    completors[1].complete("len", 0, testList);
+    assertTrue(testList.get(0).endsWith("length("));
+
+    testList=new ArrayList<String>();
+    completors[0].complete("set f", 0, testList);
+    assertEquals("set", testList.get(0));
+
   }
 
   public void testRun() throws Exception {
-
-    CliSessionState ss = new CliSessionState(new HiveConf());
+    // clean history
+    String historyDirectory = System.getProperty("user.home");
+    if ((new File(historyDirectory)).exists()) {
+      File historyFile = new File(historyDirectory + File.separator + ".hivehistory");
+      historyFile.delete();
+    }
+    HiveConf configuration = new HiveConf();
+    CliSessionState ss = new CliSessionState(configuration);
     CliSessionState.start(ss);
     String[] args = {};
     PrintStream oldOut = System.out;
@@ -149,14 +170,17 @@ public class TestCliDriverMethods extends TestCase {
 
     try {
       new FakeCliDriver().run(args);
+      assertTrue(dataOut.toString().contains("test message"));
+      assertTrue(dataErr.toString().contains("Hive history file="));
+      assertTrue(dataErr.toString().contains("File: fakeFile is not a file."));
+      dataOut.reset();
+      dataErr.reset();
+
     } finally {
       System.setOut(oldOut);
       System.setErr(oldErr);
 
     }
-    assertTrue(dataOut.toString().contains("test message"));
-    assertTrue(dataErr.toString().contains("Hive history file="));
-    assertTrue(dataErr.toString().contains("File: fakeFile is not a file."));
 
   }
 
@@ -170,7 +194,6 @@ public class TestCliDriverMethods extends TestCase {
     ss.out = System.out;
 
     NoExitSecurityManager newSecurityManager = new NoExitSecurityManager();
-    System.setSecurityManager(newSecurityManager);
     try {
       CliSessionState.start(ss);
       CliDriver cliDriver = new CliDriver();
@@ -230,6 +253,8 @@ public class TestCliDriverMethods extends TestCase {
     CliDriver cliDriver = new CliDriver();
     cliDriver.processCmd("remote command");
     assertTrue(data.toString().contains("[Hive Error]: test HiveServerException"));
+    data.reset();
+
 
   }
 
@@ -253,6 +278,30 @@ public class TestCliDriverMethods extends TestCase {
 
   }
 
+  /**
+   * test remote Exception
+   */
+  public void testProcessSelectDatabase() throws Exception {
+    CliSessionState sessinState = new CliSessionState(new HiveConf());
+    CliSessionState.start(sessinState);
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    sessinState.err = new PrintStream(data);
+    sessinState.database = "database";
+    CliDriver driver = new CliDriver();
+    NoExitSecurityManager securityManager = new NoExitSecurityManager();
+    try {
+      driver.processSelectDatabase(sessinState);
+      fail("shuld be exit");
+    } catch (ExitException e) {
+      e.printStackTrace();
+      assertEquals(40000, e.getStatus());
+    } finally {
+      securityManager.resetSecurityManager();
+    }
+    assertTrue(data.toString().contains(
+        "FAILED: ParseException line 1:4 cannot recognize input near 'database'"));
+  }
+
   public void testprocessInitFiles() throws Exception {
     String oldHiveHome = System.getenv("HIVE_HOME");
     String oldHiveConfDir = System.getenv("HIVE_CONF_DIR");
@@ -268,20 +317,36 @@ public class TestCliDriverMethods extends TestCase {
     FileUtils.write(homeFile, "-- init hive file for test ");
     setEnv("HIVE_HOME", homeFile.getParentFile().getParentFile().getAbsolutePath());
     setEnv("HIVE_CONF_DIR", homeFile.getParentFile().getAbsolutePath());
-    CliSessionState ss = new CliSessionState(new HiveConf());
+    CliSessionState sessionState = new CliSessionState(new HiveConf());
 
     ByteArrayOutputStream data = new ByteArrayOutputStream();
+    NoExitSecurityManager securityManager = new NoExitSecurityManager();
 
-    ss.err = new PrintStream(data);
-    ss.out = System.out;
+    sessionState.err = new PrintStream(data);
+    sessionState.out = System.out;
     try {
-      CliSessionState.start(ss);
+      CliSessionState.start(sessionState);
       CliDriver cliDriver = new CliDriver();
-      cliDriver.processInitFiles(ss);
-      assertTrue(data
-          .toString()
-          .contains(
-              "Putting the global hiverc in $HIVE_HOME/bin/.hiverc is deprecated. Please use $HIVE_CONF_DIR/.hiverc instead."));
+      cliDriver.processInitFiles(sessionState);
+      assertTrue(data.toString().contains(
+          "Putting the global hiverc in $HIVE_HOME/bin/.hiverc is deprecated. " +
+              "Please use $HIVE_CONF_DIR/.hiverc instead."));
+      FileUtils.write(homeFile, "bla bla bla");
+      // if init file contains incorrect row
+      try {
+        cliDriver.processInitFiles(sessionState);
+        fail("should be exit");
+      } catch (ExitException e) {
+        assertEquals(40000, e.getStatus());
+      }
+      setEnv("HIVE_HOME", null);
+      try {
+        cliDriver.processInitFiles(sessionState);
+        fail("should be exit");
+      } catch (ExitException e) {
+        assertEquals(40000, e.getStatus());
+      }
+
     } finally {
       // restore data
       setEnv("HIVE_HOME", oldHiveHome);
@@ -289,6 +354,20 @@ public class TestCliDriverMethods extends TestCase {
       FileUtils.deleteDirectory(new File(tmpDir));
     }
 
+    File f = File.createTempFile("hive", "test");
+    FileUtils.write(f, "bla bla bla");
+    try {
+      sessionState.initFiles = Arrays.asList(new String[] {f.getAbsolutePath()});
+      CliDriver cliDriver = new CliDriver();
+      cliDriver.processInitFiles(sessionState);
+      fail("should be exit");
+    } catch (ExitException e) {
+      assertEquals(40000, e.getStatus());
+      assertTrue(data.toString().contains("cannot recognize input near 'bla' 'bla' 'bla'"));
+
+    } finally {
+      securityManager.resetSecurityManager();
+    }
   }
 
 
@@ -376,7 +455,7 @@ public class TestCliDriverMethods extends TestCase {
     public NoExitSecurityManager() {
       super();
       parentSecurityManager = System.getSecurityManager();
-
+      System.setSecurityManager(this);
     }
 
     @Override
