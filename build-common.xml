@@ -431,7 +431,14 @@
   <!-- target to run the tests -->
   <target name="test"
     depends="test-conditions,gen-test,compile-test,test-jar,test-init">
-    <echo message="Project: ${ant.project.name}"/>
+  	<antcall target="test-impl" inheritall="true" inheritrefs="true"/>
+  </target>
+	
+	<!-- delegate target to be invoked w/o "test" target dependencies: -->
+	<!-- TODO: guard "test-init" to prevent double execution. -->
+	<target name="test-impl" depends="with.clover,test-init">
+    <echo message="##### test-impl: Project: ${ant.project.name}"/>
+		
     <property name="hadoop.testcp" refid="test.classpath"/>
     <if>
       <equals arg1="${hadoop.mr.rev}" arg2="23" />
@@ -509,15 +516,16 @@
                  excludes="**/TestSerDe.class,**/TestHiveMetaStore.class,**/TestBeeLineDriver*.class,**/TestHiveServer2Concurrency.class,**/*$*.class,${test.junit.exclude}" />
       </batchtest>
       <batchtest todir="${test.build.dir}" if="testcase">
-        <fileset dir="${test.build.classes}">
-          <include name="**/${testcase}.class"/>
-          <exclude name="${test.junit.exclude}"/>
+        <fileset dir="${test.build.classes}"
+          includes="${testcase}"
+          excludes="${test.junit.exclude}">
         </fileset>
       </batchtest>
       <assertions>
         <enable />
       </assertions>
     </junit>
+		
     <fail message="Tests failed!">
       <condition>
         <and>
@@ -526,7 +534,7 @@
         </and>
       </condition>
     </fail>
-  </target>
+	</target>
 
   <target name="clean-test">
     <echo message="Project: ${ant.project.name}"/>

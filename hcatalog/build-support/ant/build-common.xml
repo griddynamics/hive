@@ -94,9 +94,14 @@
 
   <target name="test" depends="jar, compile-test">
     <echo message="${ant.project.name}"/>
-    <_junit srcDir="${basedir}/src/test/java"/>
+  	<antcall target="test-impl" inheritall="true" inheritrefs="true"/>
   </target>
 
+  <target name="test-impl">
+    <echo message="###### test-impl: ${ant.project.name}"/>
+    <_junit srcDir="${basedir}/src/test/java"/>
+  </target>
+	
   <target name="jar" depends="mvn-dependencies,compile,compile-resource">
     <echo message="${ant.project.name}"/>
     <jar jarfile="${build.dir}/${jar.name}" basedir="${build.classes}">

@@ -25,7 +25,7 @@
          xmlns:maven="antlib:org.apache.maven.artifact.ant">
 
   <property name="hive.root" location="${basedir}"/>
-  <property file="${hive.root}/build.properties"/>
+  <property file="${hive.root}/build.properties" />
   <property file="${user.home}/build.properties" />
   <property file="${basedir}/build.properties" />
   <loadproperties srcfile="${ivy.conf.dir}/libraries.properties"/>
@@ -295,7 +295,22 @@
   </target>
   
   <target name="test" depends="clean-test,jar-test" description="Run tests">
+  	<antcall target="test-impl" inheritall="true" inheritrefs="true">
+  		<param name="test-target" value="test"/>
+  	</antcall>	
+  </target>
+	
+    <target name="test-impl">
     <echo message="Project: ${ant.project.name}"/>
+		
+    <!-- set default "test-target": -->
+    <condition property="test-target" value="test-impl">
+      <not>
+       <isset property="test-target"/>
+      </not>	
+    </condition>
+    <echo message="##### test-target=${test-target}"/>
+		
     <if>
       <isset property="module"/>
       <else>
@@ -304,16 +319,19 @@
         </antcall>
       </else>
     </if>
-    <condition property="target.module" value="${module}" else="${iterate.hive.test}">
+
+    <condition property="test-iteration-list" value="${module}" else="${iterate.hive.tests}">
       <isset property="module"/>
     </condition>
-    <for keepgoing="${test.continue.on.failure}" list="${target.module}" param="module">
+
+    <for keepgoing="${test.continue.on.failure}" list="${test-iteration-list}" param="module">
       <sequential>
         <trycatch property="failure.message">
           <try>
-            <ant antfile="@{module}/build.xml" target="test" inheritAll="false" inheritRefs="true">
+            <ant antfile="@{module}/build.xml" target="${test-target}" inheritAll="false" inheritRefs="true">
               <property name="build.dir.hive" location="${build.dir.hive}"/>
               <property name="is-offline" value="${is-offline}"/>
+              <property name="test-target" value="${test-target}"/>
             </ant>
           </try>
           <catch>
@@ -330,7 +348,7 @@
 
   <target name="test-shims">
     <echo message="Project: ${ant.project.name}"/>
-    <subant target="test" failonerror="${test.halt.on.failure}">
+    <subant target="${test-target}" failonerror="${test.halt.on.failure}">
       <property name="hadoop.version" value="${hadoop.security.version}"/>
       <property name="hadoop.security.version" value="${hadoop.security.version}"/>
       <fileset dir="${hive.root}/shims" includes="build.xml"/>
