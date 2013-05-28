@@ -138,9 +138,8 @@
   <target name="with.clover" if="clover.enabled">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
     <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
-      <!-- <fileset dir="src" includes="**/*.java"/> -->
-      <!-- NB: IvanVeselovsky, 24 May 2013: this fileset enables instrumentation of tests generated from Velocity macro: -->
-      <!-- <fileset dir="../build" includes="**/*.java"/> -->
+      <!-- NB: the fileset specification is removed from there to enable clover tracing 
+       over all the tests, including generated ones. -->
     </clover-setup>
   </target>
 
