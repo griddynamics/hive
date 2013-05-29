@@ -129,10 +129,10 @@
 
     <!-- Run the unit tests -->
     <target name="test" depends="compile-test">
-      <antcall target="test-impl" inheritall="true" inheritrefs="true"/>
+      <antcall target="test-lightweight" inheritall="true" inheritrefs="true"/>
     </target>
 
-	  <target name="test-impl">
+	  <target name="test-lightweight">
       <sequential>
           <delete dir="${test.log.dir}"/>
         <delete dir="${test.tmp.dir}" />

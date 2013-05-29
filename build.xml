@@ -294,18 +294,34 @@
     <echo message="Project: ${ant.project.name}"/>
     <iterate target="compile-test" iterate="${iterate.hive.compile-tests}"/>
   </target>
-  
-  <target name="test" depends="clean-test,jar-test" description="Run tests">
-    <antcall target="test-impl" inheritall="true" inheritrefs="true">
+
+  <!-- Runs all the tests with test rebuilding: -->
+  <target name="test" depends="clean-test,jar-test" description="Run all the tests with test code regeneration/rebuilding.">
+    <antcall target="test-lightweight" inheritall="true" inheritrefs="true">
+      <!-- "test" value of "test-target" to run the tests with rebuilding: -->
       <param name="test-target" value="test"/>
     </antcall>
   </target>
   
-  <target name="test-impl">
+  <condition property="clover.enabled">
+    <isset property="clover.jar"/>
+  </condition>
+
+    <target name="with.clover-EXPERIMENTAL" if="clover.enabled">
+      <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+      <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
+        <!-- NB: the fileset specification is removed from there to enable clover tracing 
+         over all the tests, including generated ones. -->
+      </clover-setup>
+    </target>
+  
+  <target name="test-lightweight" depends="with.clover-EXPERIMENTAL" description="Runs tests without any regeneration/rebuilding. 
+    This target can be invoked directly. Useful in distributed builds to run batches of tests.">
     <echo message="Project: ${ant.project.name}"/>
     
-    <!-- set default "test-target": -->
-    <condition property="test-target" value="test-impl">
+    <!-- "test-target" stands for the target to be invoked on all the subprojects. 
+     If "test-target" is not already set (target invoked directly), use value "test-lightweight": -->
+    <condition property="test-target" value="test-lightweight">
       <not>
         <isset property="test-target"/>
       </not>  
@@ -347,6 +363,7 @@
     </for>
   </target>
 
+  <!-- Special test implementation for "shims" subproject: -->
   <target name="test-shims">
     <echo message="Project: ${ant.project.name}"/>
     <subant target="${test-target}" failonerror="${test.halt.on.failure}">

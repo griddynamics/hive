@@ -91,18 +91,18 @@
     <target name="gen-test" description="Generate tests, a no-op for hcat"/>
 
     <target name="test" depends="jar" description="run unit tests">
-    	<antcall target="test-impl" inheritall="true" inheritrefs="true"/>
+    	<antcall target="test-impl" inheritall="true" inheritrefs="true">
+    	  <param name="test-target" value="test"/>
+    	</antcall>
+    </target>
+  
+    <target name="test-lightweight" description="run unit tests w/o rebuilding">
+      <antcall target="test-impl" inheritall="true" inheritrefs="true">
+        <param name="test-target" value="test-lightweight"/>
+      </antcall>
     </target>
 	
     <target name="test-impl">
-    	<echo message="####### starting hcatalog/test-impl: "/>
-    	
-      <condition property="test-target" value="test">
-        <not>
-          <isset property="test-target"/>
-        </not>
-      </condition>
-    	
       <echo message="####### test-target: ${test-target}"/>
       <!-- Placed in a parallel structure so that the tests keep going
            even if some fail.  Otherwise a failure in one of the earlier ant

@@ -427,15 +427,21 @@
   <property name="mapred.job.tracker" value="local"/>
   <property name="fs.default.name" value="file:///"/>
 
-  <!-- target to run the tests -->
+  <!-- target to run the tests with test rebuilding. -->
   <target name="test"
     depends="test-conditions,gen-test,compile-test,test-jar,test-init">
   	<antcall target="test-impl" inheritall="true" inheritrefs="true"/>
   </target>
+  
+  <!-- target to run the tests without test rebuilding. It has reduced set of dependencies. -->
+  <!-- EXPERIMENTAL: with.clover dependency was there, but it looks like it can be boved to the 
+   root build.xml and invoked just once: -->
+  <target name="test-lightweight" depends="test-init,test-conditions">
+    <antcall target="test-impl" inheritall="true" inheritrefs="true"/>
+  </target>
 	
 	<!-- delegate target to be invoked w/o "test" target dependencies: -->
-	<!-- TODO: guard "test-init" to prevent double execution. -->
-	<target name="test-impl" depends="with.clover,test-init,test-conditions">
+	<target name="test-impl">
     <echo message="##### test-impl: Project: ${ant.project.name}"/>
 		
     <property name="hadoop.testcp" refid="test.classpath"/>

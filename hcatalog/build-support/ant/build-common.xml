@@ -93,11 +93,15 @@
   </target>
 
   <target name="test" depends="jar, compile-test">
-    <echo message="${ant.project.name}"/>
   	<antcall target="test-impl" inheritall="true" inheritrefs="true"/>
   </target>
 
+  <target name="test-lightweight">
+    <antcall target="test-impl" inheritall="true" inheritrefs="true"/>
+  </target>
+
   <target name="test-impl">
+    <echo message="${ant.project.name}"/>
     <echo message="###### test-impl: ${ant.project.name}"/>
     <_junit srcDir="${basedir}/src/test/java"/>
   </target>
