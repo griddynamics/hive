@@ -143,7 +143,7 @@
     <fileset dir="${hive.root}" includes="hive-*.jar"/>
     <fileset dir="${hive.root}/lib" includes="*.jar"/>
     <fileset dir="${build.dir.hive}/ivy/lib/default" includes="*.jar"
-	excludes="*hadoop*.jar" erroronmissingdir="false"/>
+  excludes="*hadoop*.jar" erroronmissingdir="false"/>
   </path>
 
   <path id="classpath">
@@ -291,26 +291,26 @@
   <target name="jar-test" depends="gen-test"
           description="Build Java test artifacts">
     <echo message="Project: ${ant.project.name}"/>
-    <iterate target="compile-test" iterate="${iterate.hive.tests}"/>
+    <iterate target="compile-test" iterate="${iterate.hive.compile-tests}"/>
   </target>
   
   <target name="test" depends="clean-test,jar-test" description="Run tests">
-  	<antcall target="test-impl" inheritall="true" inheritrefs="true">
-  		<param name="test-target" value="test"/>
-  	</antcall>	
+    <antcall target="test-impl" inheritall="true" inheritrefs="true">
+      <param name="test-target" value="test"/>
+    </antcall>
   </target>
-	
-    <target name="test-impl">
+  
+  <target name="test-impl">
     <echo message="Project: ${ant.project.name}"/>
-		
+    
     <!-- set default "test-target": -->
     <condition property="test-target" value="test-impl">
       <not>
-       <isset property="test-target"/>
-      </not>	
+        <isset property="test-target"/>
+      </not>  
     </condition>
     <echo message="##### test-target=${test-target}"/>
-		
+    
     <if>
       <isset property="module"/>
       <else>
@@ -577,7 +577,7 @@
         <include name="*.jar"/>
         <exclude name="*.tar.gz"/>
         <exclude name="hadoop-*.jar" />
-	<exclude name="**/*high-scale-lib-*"/>
+  <exclude name="**/*high-scale-lib-*"/>
         <exclude name="**/hamcrest-core-*jar"/>
         <exclude name="**/junit*.jar"/>
         <exclude name="**/asm*.jar"/>
@@ -701,7 +701,7 @@
       dest="${build.dir.hive}/arc-jira.tar.gz"
       src="https://github.com/facebook/arc-jira/tarball/master"/>
     <untar src="${build.dir.hive}/arc-jira.tar.gz" compression="gzip"
- 		dest="${build.dir.hive}">
+     dest="${build.dir.hive}">
       <patternset>
         <include name="facebook-arc-jira-*/arc_jira_lib/**"/>
       </patternset>
@@ -904,14 +904,14 @@
            <exclude name="data/files/*.rc"/>
            <exclude name="**/test/data/**/*.rc"/>
            <exclude name="data/files/*.seq"/>
-	   <exclude name="**/data/files/*.log"/>
+     <exclude name="**/data/files/*.log"/>
            <exclude name="**/*.txt"/>
            <exclude name="**/test/results/**/*.out"/>
            <exclude name="**/test/results/**/*.xml"/>
            <exclude name="**/testdata/*.input"/>
 
            <!-- Ignore recordio generated file -->
-	   <exclude name="ql/src/test/org/apache/hadoop/hive/ql/io/RecordTestObj.java"/>
+     <exclude name="ql/src/test/org/apache/hadoop/hive/ql/io/RecordTestObj.java"/>
 
            <!-- Ignore thrift generated files -->
            <exclude name="service/lib/php/packages/fb303/FacebookService.php"/>
@@ -930,7 +930,7 @@
   <target name="check-for-rat">
     <echo message="Project: ${ant.project.name}"/>
     <available property="rat.present" 
-	       resource="org/apache/rat/anttasks/antlib.xml">
+         resource="org/apache/rat/anttasks/antlib.xml">
       <classpath refid="rat-classpath"/>
     </available>
   </target>
@@ -966,7 +966,7 @@
     <mkdir dir="${checkstyle.build.dir}"/>
 
     <checkstyle config="${checkstyle.conf.dir}/checkstyle.xml"
-  		failOnViolation="false">
+      failOnViolation="false">
       <fileset dir="${hive.root}">
         <exclude name="build/**"/>
         <exclude name="ant/**"/>
@@ -1010,7 +1010,7 @@
     <echo message="Project: ${ant.project.name}" />
     <path id="findbugs.classpath">
       <fileset dir="${build.ivy.lib.dir}/findbugs">
-	<include name="*.jar" />
+  <include name="*.jar" />
       </fileset>
     </path>
     <pathconvert property="findbugs.classpath" refid="findbugs.classpath" />
@@ -1031,9 +1031,9 @@
     <findbugs classpath="${findbugs.classpath}" pluginList="" effort="max" output="xml" outputFile="${findbugs.report.xmlfile}" excludeFilter="${findbugs.exclude.file}">
       
       <auxClasspath>
-	<fileset dir="${build.dir.hive}">
-	  <include name="**/*.jar" />
-	</fileset>
+  <fileset dir="${build.dir.hive}">
+    <include name="**/*.jar" />
+  </fileset>
       </auxClasspath>
       
       <sourcePath path="${hive.root}/ant" />
@@ -1127,7 +1127,7 @@
   <target name="mvn-taskdef" depends="ivy-retrieve-maven-ant-tasks">
     <echo message="Project: ${ant.project.name}"/>
     <typedef resource="org/apache/maven/artifact/ant/antlib.xml"
-	     uri="urn:maven-artifact-ant" classpathref="maven-ant-tasks.classpath" />
+       uri="urn:maven-artifact-ant" classpathref="maven-ant-tasks.classpath" />
   </target>
   
   <target name="maven-build" depends="package" description="Build Maven artifacts">

@@ -435,7 +435,7 @@
 	
 	<!-- delegate target to be invoked w/o "test" target dependencies: -->
 	<!-- TODO: guard "test-init" to prevent double execution. -->
-	<target name="test-impl" depends="with.clover,test-init">
+	<target name="test-impl" depends="with.clover,test-init,test-conditions">
     <echo message="##### test-impl: Project: ${ant.project.name}"/>
 		
     <property name="hadoop.testcp" refid="test.classpath"/>
