@@ -113,7 +113,8 @@
   <macrodef name="iterate">
     <attribute name="target"/>
     <attribute name="iterate"/>
-    <attribute name="failonerror" default="false"/>
+    <!-- NB: "failonerror" set to fast-fail on compilation errors: -->
+    <attribute name="failonerror" default="true"/>
     <sequential>
       <if>
         <isset property="module"/>
@@ -285,7 +286,7 @@
   </target>
 
   <target name="gen-test" depends="jar" description="Generate tests">
-    <iterate target="gen-test" iterate="${iterate.hive.tests}"/>
+    <iterate target="gen-test" iterate="${iterate.hive.compile-tests}"/>
   </target>
   
   <target name="jar-test" depends="gen-test"
