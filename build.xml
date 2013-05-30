@@ -400,6 +400,8 @@
     <clover-merge initString="hive-clover.db">
       <cloverDbSet dir="${build.dir.hive}">
         <include name="**/clover.db"/>
+        <include name="**/aggCloverMerge.db"/>
+        <include name="**/aggMerge*.db"/>
         <include name="**/clover-baseline.db"/>
         <include name="**/clover-original.db"/>
       </cloverDbSet>
