@@ -319,7 +319,9 @@
   <target name="jar-test" depends="gen-test"
           description="Build Java test artifacts">
     <echo message="Project: ${ant.project.name}"/>
-    <iterate target="compile-test" iterate="${iterate.hive.compile-tests}"/>
+    <!-- NB: changed to be able to separate tests packaging 
+       from tests running. Was: target="compile-test". -->
+    <iterate target="test-jar" iterate="${iterate.hive.compile-tests}"/>
   </target>
 
   <!-- Runs all the tests with test rebuilding: -->

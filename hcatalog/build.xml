@@ -198,6 +198,10 @@
           <propertyset refid="clover-property-set-id"/>
         </ant>
     </target>
+  
+    <!-- stub target to support interface of hive/build-common.xml -->
+    <target name="test-jar" depends="compile-test">
+    </target>
 
     <target name="test-with-clover" depends="clover-init"
             description="run unit tests and generate code coverage reports">
