@@ -127,6 +127,9 @@
             <property name="is-offline" value="${is-offline}"/>
             <property name="thrift.home" value="${thrift.home}"/>
             <property name="build.dir.hive" location="${build.dir.hive}"/>
+            <!-- Pass down the Clover properties: -->
+            <reference refid="clover-property-set-id"/>
+            <propertyset refid="clover-property-set-id"/>
           </subant>
         </sequential>
       </for>
@@ -228,11 +231,32 @@
     <iterate target="test-init" iterate="${iterate.hive.all}"/>
   </target>
 
+  <!-- empty propertyset needed in case if clover.jar is not defined: -->
+  <propertyset id="clover-property-set-id"/>
+  
+  <!-- Initializes Clover subsystem. -->
+  <target name="clover-init" if="clover.jar">
+    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
+      <!-- Exclude custom Ant tasks from the instrumentation: -->
+      <files excludes="org/apache/hadoop/hive/ant/**/*"/>
+    </clover-setup>
+    
+    <propertyset id="clover-property-set-id">
+      <propertyref name="build.compiler"/>
+      <propertyref name="clover.initstring"/>
+      <propertyref name="clover.jarpath"/>
+    </propertyset>
+  </target>
+  
   <!-- target to deploy anttasks -->
-  <target name="compile-ant-tasks">
+  <target name="compile-ant-tasks" depends="clover-init">
     <echo message="Project: ${ant.project.name}"/>
-    <subant target="compile">
+    <subant target="compile" failonerror="true">
       <fileset dir="." includes="ant/build.xml"/>
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
     </subant>
   </target>
 
@@ -240,6 +264,9 @@
     <echo message="Project: ${ant.project.name}"/>
     <subant target="jar">
       <fileset dir="." includes="ant/build.xml"/>
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
     </subant>
     <taskdef name="getversionpref" classname="org.apache.hadoop.hive.ant.GetVersionPref"
              classpath="${build.dir.hive}/anttasks/hive-anttasks-${version}.jar"/>
@@ -296,31 +323,41 @@
   </target>
 
   <!-- Runs all the tests with test rebuilding: -->
-  <target name="test" depends="clean-test,jar-test" description="Run all the tests with test code regeneration/rebuilding.">
-    <antcall target="test-lightweight" inheritall="true" inheritrefs="true">
+  <target name="test" depends="clean-test,jar-test" 
+    description="Run all the tests with test code regeneration/rebuilding.">
+    <antcall target="test-impl" inheritall="true" inheritrefs="true">
       <!-- "test" value of "test-target" to run the tests with rebuilding: -->
       <param name="test-target" value="test"/>
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
     </antcall>
   </target>
+
+  <target name="test-lightweight" depends="clover-init" 
+    description="Runs tests without any regeneration/rebuilding. 
+ This target can be invoked directly. Useful in distributed builds to run batches of tests.">
+    <antcall target="test-impl" inheritall="true" inheritrefs="true">
+      <!-- "test-lightweight" value of "test-target" to run the tests without rebuilding: -->
+      <param name="test-target" value="test-lightweight"/>
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </antcall>
+  </target>  
   
-  <target name="test-lightweight" description="Runs tests without any regeneration/rebuilding. 
+  <target name="test-impl" description="Runs tests without any regeneration/rebuilding. 
     This target can be invoked directly. Useful in distributed builds to run batches of tests.">
     <echo message="Project: ${ant.project.name}"/>
-    
-    <!-- "test-target" stands for the target to be invoked on all the subprojects. 
-     If "test-target" is not already set (target invoked directly), use value "test-lightweight": -->
-    <condition property="test-target" value="test-lightweight">
-      <not>
-        <isset property="test-target"/>
-      </not>  
-    </condition>
-    <echo message="##### test-target=${test-target}"/>
-    
+    <echo message="   test-target: ${test-target}"/>
     <if>
       <isset property="module"/>
       <else>
         <antcall target="test-shims">
           <param name="hadoop.version.ant-internal" value="${hadoop.security.version}" />
+          <reference refid="clover.config"/>
+          <reference refid="clover-property-set-id"/>
+          <propertyset refid="clover-property-set-id"/>
         </antcall>
       </else>
     </if>
@@ -337,6 +374,9 @@
               <property name="build.dir.hive" location="${build.dir.hive}"/>
               <property name="is-offline" value="${is-offline}"/>
               <property name="test-target" value="${test-target}"/>
+              <reference refid="clover.config"/>
+              <reference refid="clover-property-set-id"/>
+              <propertyset refid="clover-property-set-id"/>
             </ant>
           </try>
           <catch>
@@ -357,6 +397,9 @@
     <subant target="${test-target}" failonerror="${test.halt.on.failure}">
       <property name="hadoop.version" value="${hadoop.security.version}"/>
       <property name="hadoop.security.version" value="${hadoop.security.version}"/>
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
       <fileset dir="${hive.root}/shims" includes="build.xml"/>
     </subant>
   </target>
@@ -612,7 +655,11 @@
 
     <!-- Package the hcat stuff and pull it up into Hive's build dir -->
     <ant antfile="${hive.root}/hcatalog/build.xml" target="package"
-        inheritAll="false"/>
+        inheritAll="false">
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </ant>  
     <mkdir dir="${target.dir}/hcatalog"/>
     <copy todir="${target.dir}/hcatalog">
         <fileset dir="${hive.root}/hcatalog/build/hcatalog-${hcatalog.version}"/>

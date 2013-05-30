@@ -131,19 +131,16 @@
   </condition>
   <import file="build-offline.xml"/>
 
-  <condition property="clover.enabled">
-    <isset property="clover.jar"/>
-  </condition>
-
-  <target name="with.clover" if="clover.enabled">
-    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
-    <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
-      <!-- Exclude custom Ant tasks from the instrumentation: -->
-      <files excludes="org/apache/hadoop/hive/ant/**/*"/>
-    </clover-setup>
+  <!-- Checks correct clover initialization on the current visibility scope. 
+    Fails the build if the check is failed. -->
+  <target name="check-clover-ok" if="clover.jar">
+    <fail message="Property 'clover.jar' is set, but Clover setup was not correctly invoked 
+ in the current visibility scope." unless="clover.initstring"/>
+    <echo message="Clover init okay, clover.initstring=${clover.initstring}"/>
   </target>
 
-  <target name="gen-clover-report" depends="with.clover">
+  <!-- depends="with.clover" -->
+  <target name="gen-clover-report" depends="check-clover-ok">
     <mkdir dir="${build.dir.hive}/clover/report/html"/>
     <mkdir dir="${build.dir.hive}/clover/report/html/${ant.project.name}"/>
     <clover-report>
@@ -256,7 +253,8 @@
     </copy>
   </target>
 
-  <target name="init" depends="create-dirs, with.clover">
+  <!-- with.clover -->
+  <target name="init" depends="create-dirs, check-clover-ok">
     <echo message="Project: ${ant.project.name}"/>
   </target>
 
@@ -276,7 +274,7 @@
     <echo message="Project: ${ant.project.name}"/>
   </target>
 
-  <target name="compile" depends="init, setup, ivy-retrieve">
+  <target name="compile" depends="init, setup, ivy-retrieve, check-clover-ok">
     <echo message="Project: ${ant.project.name}"/>
     <javac
      encoding="${build.encoding}"
@@ -314,7 +312,7 @@
   </target>
 
   <!-- target to compile tests -->
-  <target name="compile-test" depends="compile,ivy-retrieve-test,set-test-classpath">
+  <target name="compile-test" depends="compile,ivy-retrieve-test,set-test-classpath,check-clover-ok">
     <echo message="Project: ${ant.project.name}"/>
     <javac
      encoding="${build.encoding}"
@@ -430,16 +428,27 @@
   <!-- target to run the tests with test rebuilding. -->
   <target name="test"
     depends="test-conditions,gen-test,compile-test,test-jar,test-init">
-  	<antcall target="test-impl" inheritall="true" inheritrefs="true"/>
+    <echo message="Project: ${ant.project.name}"/>
+  	<antcall target="test-impl" inheritall="true" inheritrefs="true">
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </antcall>
   </target>
   
   <!-- target to run the tests without test rebuilding. It has reduced set of dependencies. -->
-  <target name="test-lightweight" depends="with.clover,test-init,test-conditions">
-    <antcall target="test-impl" inheritall="true" inheritrefs="true"/>
+  <!-- with.clover -->
+  <target name="test-lightweight" depends="test-init,test-conditions">
+    <echo message="Project: ${ant.project.name}"/>
+    <antcall target="test-impl" inheritall="true" inheritrefs="true">
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </antcall>
   </target>
 	
 	<!-- delegate target to be invoked w/o "test" target dependencies: -->
-	<target name="test-impl">
+	<target name="test-impl" depends="check-clover-ok">
     <echo message="##### test-impl: Project: ${ant.project.name}"/>
 		
     <property name="hadoop.testcp" refid="test.classpath"/>
