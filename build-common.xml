@@ -138,8 +138,8 @@
   <target name="with.clover" if="clover.enabled">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
     <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
-      <!-- NB: the fileset specification is removed from there to enable clover tracing 
-       over all the tests, including generated ones. -->
+      <!-- Exclude custom Ant tasks from the instrumentation: -->
+      <files excludes="org/apache/hadoop/hive/ant/**/*"/>
     </clover-setup>
   </target>
 
@@ -434,9 +434,7 @@
   </target>
   
   <!-- target to run the tests without test rebuilding. It has reduced set of dependencies. -->
-  <!-- EXPERIMENTAL: with.clover dependency was there, but it looks like it can be boved to the 
-   root build.xml and invoked just once: -->
-  <target name="test-lightweight" depends="test-init,test-conditions">
+  <target name="test-lightweight" depends="with.clover,test-init,test-conditions">
     <antcall target="test-impl" inheritall="true" inheritrefs="true"/>
   </target>
 	

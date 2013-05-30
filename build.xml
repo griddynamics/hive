@@ -303,19 +303,7 @@
     </antcall>
   </target>
   
-  <condition property="clover.enabled">
-    <isset property="clover.jar"/>
-  </condition>
-
-    <target name="with.clover-EXPERIMENTAL" if="clover.enabled">
-      <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
-      <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
-        <!-- NB: the fileset specification is removed from there to enable clover tracing 
-         over all the tests, including generated ones. -->
-      </clover-setup>
-    </target>
-  
-  <target name="test-lightweight" depends="with.clover-EXPERIMENTAL" description="Runs tests without any regeneration/rebuilding. 
+  <target name="test-lightweight" description="Runs tests without any regeneration/rebuilding. 
     This target can be invoked directly. Useful in distributed builds to run batches of tests.">
     <echo message="Project: ${ant.project.name}"/>
     
