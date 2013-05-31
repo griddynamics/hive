@@ -93,6 +93,8 @@
   </target>
 
   <target name="test" depends="jar, compile-test">
+    <delete dir="${test.logs}"/>
+    <delete dir="${test.warehouse.dir}"/>
   	<antcall target="test-impl" inheritall="true" inheritrefs="true"/>
   </target>
 
@@ -101,14 +103,14 @@
   </target>
 
   <target name="check-clover-ok" if="clover.jar">
+    <echo message="Project: ${ant.project.name}"/>
     <fail message="Property 'clover.jar' is set, but Clover setup was not correctly invoked 
  in the current visibility scope." unless="clover.initstring"/>
-    <echo message="Clover init okay, clover.initstring=${clover.initstring}"/>
+    <echo message="    Clover init okay, clover.initstring=${clover.initstring}"/>
   </target>
     
   <target name="test-impl" depends="check-clover-ok">
-    <echo message="${ant.project.name}"/>
-    <echo message="###### test-impl: ${ant.project.name}"/>
+    <echo message="Project: ${ant.project.name}"/>
     <_junit srcDir="${basedir}/src/test/java"/>
   </target>
 	

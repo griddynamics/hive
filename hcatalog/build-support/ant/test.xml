@@ -29,8 +29,8 @@
       <exec executable="${path.to.basedir}/build-support/scripts/umaskcheck.sh"
             failonerror="true"/>
 
-      <delete dir="${test.logs}"/>
-      <delete dir="${test.warehouse.dir}"/>
+      <!-- <delete dir="${test.logs}"/>
+      <delete dir="${test.warehouse.dir}"/> -->
       <mkdir dir="${test.logs}"/>
       <mkdir dir="${test.warehouse.dir}"/>
 

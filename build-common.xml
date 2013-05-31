@@ -134,9 +134,10 @@
   <!-- Checks correct clover initialization on the current visibility scope. 
     Fails the build if the check is failed. -->
   <target name="check-clover-ok" if="clover.jar">
+    <echo message="Project: ${ant.project.name}"/>
     <fail message="Property 'clover.jar' is set, but Clover setup was not correctly invoked 
  in the current visibility scope." unless="clover.initstring"/>
-    <echo message="Clover init okay, clover.initstring=${clover.initstring}"/>
+    <echo message="    Clover init okay, clover.initstring=${clover.initstring}"/>
   </target>
 
   <!-- depends="with.clover" -->
