@@ -450,7 +450,7 @@
 	
 	<!-- delegate target to be invoked w/o "test" target dependencies: -->
 	<target name="test-impl" depends="check-clover-ok">
-    <echo message="##### test-impl: Project: ${ant.project.name}"/>
+    <echo message="Project: ${ant.project.name}"/>
 		
     <property name="hadoop.testcp" refid="test.classpath"/>
     <if>
