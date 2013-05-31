@@ -157,7 +157,7 @@
               </batchtest>
               <!-- Run one test case.  To use this define -Dtestcase=X on the command line -->
               <batchtest fork="yes" todir="${test.log.dir}" if="testcase">
-                  <fileset dir="src/test" includes="${testcase}"/>
+                  <fileset dir="src/test" includes="**/${testcase}.java,${testcase-list}"/>
               </batchtest>
               <assertions>
                   <enable />

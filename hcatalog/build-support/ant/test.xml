@@ -56,7 +56,7 @@
           <fileset dir="@{srcDir}" includes="**/Test*.java"/>
         </batchtest>
         <batchtest fork="yes" todir="${test.logs}" if="testcase">
-          <fileset dir="@{srcDir}" includes="${testcase}"/>
+          <fileset dir="@{srcDir}" includes="**/${testcase}.java,${testcase-list}"/>
         </batchtest>
         <assertions>
           <enable/>
