@@ -70,6 +70,8 @@ public class TestCliSessionState {
     // check connect
     sessionState.connect();
     assertTrue(sessionState.isRemoteMode());
+    assertEquals(server.getPort(), sessionState.getPort());
+    assertEquals(InetAddress.getLocalHost().getHostName(), sessionState.getHost());
     assertNotNull(sessionState.getClient());
     sessionState.close();
     // close should send command clean
