@@ -53,6 +53,7 @@ public class QTestGenTask extends Task {
       this.includeOnly = includeOnly;
     }
 
+    @Override
     public boolean accept(File fpath) {
       return includeOnly == null || includeOnly.contains(fpath.getName());
     }
@@ -404,10 +405,15 @@ public class QTestGenTask extends Task {
       throw new BuildException(e);
     }
 
-    //VelocityEngine ve = new VelocityEngine();
-
     try {
+      log("Total qfiles = " + qFiles.size());
       log("qfiles batch size = " + qfilesBatchSize);
+      int totalBatches = qFiles.size() / qfilesBatchSize;
+      if ((qFiles.size() % qfilesBatchSize) > 0) {
+        totalBatches++;
+      }
+      log("Total batches expected = " + totalBatches);
+      final int maxDigits = Integer.toString(totalBatches).length();
       final SimplifiedIterator<List<File>> simplifiedIterator
         = new EvenBatchSimplifiedIterator<File>(qFiles, qfilesBatchSize);
       List<File> qFilesSublist;
@@ -418,53 +424,12 @@ public class QTestGenTask extends Task {
           break;
         } else {
           batchNum++;
-          log("Generating test class #"+batchNum+"...");
-          generateImpl(hiveRootDir, queryDir, qFilesSublist, qFilesMap, resultsDir, logDir, outDir, batchNum);
+          String batchNumId = formatIntToLength(batchNum, maxDigits);
+          log("Generating test class "+batchNumId+"...");
+          generateImpl(hiveRootDir, queryDir, qFilesSublist, qFilesMap, resultsDir, logDir, outDir, batchNumId);
         }
       }
       log(batchNum+" batches generated.");
-
-//      ve.setProperty(RuntimeConstants.FILE_RESOURCE_LOADER_PATH, getTemplatePath());
-//      if (logFile != null) {
-//        File lf = new File(logFile);
-//        if (lf.exists()) {
-//          if (!lf.delete()) {
-//            throw new Exception("Could not delete log file " + lf.getCanonicalPath());
-//          }
-//        }
-//
-//        ve.setProperty(RuntimeConstants.RUNTIME_LOG, logFile);
-//      }
-//
-//      ve.init();
-//      Template t = ve.getTemplate(template);
-//
-//      if (clusterMode == null) {
-//        clusterMode = new String("");
-//      }
-//      if (hadoopVersion == null) {
-//        hadoopVersion = "";
-//      }
-//
-//      // For each of the qFiles generate the test
-//      VelocityContext ctx = new VelocityContext();
-//      ctx.put("className", className);
-//      ctx.put("hiveRootDir", getEscapedCanonicalPath(hiveRootDir));
-//      ctx.put("queryDir", getEscapedCanonicalPath(queryDir));
-//      ctx.put("qfiles", qFiles);
-//      ctx.put("qfilesMap", qFilesMap);
-//      ctx.put("resultsDir", getEscapedCanonicalPath(resultsDir));
-//      ctx.put("logDir", getEscapedCanonicalPath(logDir));
-//      ctx.put("clusterMode", clusterMode);
-//      ctx.put("hadoopVersion", hadoopVersion);
-//
-//      File outFile = new File(outDir, className + ".java");
-//      FileWriter writer = new FileWriter(outFile);
-//      t.merge(ctx, writer);
-//      writer.close();
-//
-//      System.out.println("Generated " + outFile.getCanonicalPath() + " from template " + template);
-
     } catch(BuildException e) {
       throw e;
     } catch(MethodInvocationException e) {
@@ -479,10 +444,18 @@ public class QTestGenTask extends Task {
       throw new BuildException("Generation failed", e);
     }
   }
+  
+  private String formatIntToLength(int num, int len) {
+    String result = Integer.toString(num);
+    while (result.length() < len) {
+       result = "0" + result;
+    }
+    return result;
+  }
 
   private void generateImpl(File hiveRootDir, File queryDir,
       List<File> qFiles, Map<String, String> qFilesMap, File resultsDir, File logDir, File outDir,
-      int suffix) throws Exception {
+      String suffix) throws Exception {
     final VelocityEngine ve = new VelocityEngine();
     ve.setProperty(RuntimeConstants.FILE_RESOURCE_LOADER_PATH, getTemplatePath());
     if (logFile != null) {
