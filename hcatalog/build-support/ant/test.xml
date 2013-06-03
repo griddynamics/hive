@@ -28,19 +28,6 @@
       <!-- If anyone knows how to set umask inside ant please do so -->
       <exec executable="${path.to.basedir}/build-support/scripts/umaskcheck.sh"
             failonerror="true"/>
-
-      <!-- added to fix test failures like this: 
-      Caused by: ERROR XBM0J: Directory /home/ivan/workspace/hive-3/hcatalog/core/build/test/metastore_db already exists.
-        at org.apache.derby.iapi.error.StandardException.newException(Unknown Source)
-        at org.apache.derby.impl.services.monitor.StorageFactoryService$9.run(Unknown Source)
-        at java.security.AccessController.doPrivileged(Native Method)
-        at org.apache.derby.impl.services.monitor.StorageFactoryService.createServiceRoot(Unknown Source)
-        at org.apache.derby.impl.services.monitor.BaseMonitor.bootService(Unknown Source)
-        at org.apache.derby.impl.services.monitor.BaseMonitor.createPersistentService(Unknown Source)
-        at org.apache.derby.iapi.services.monitor.Monitor.createPersistentService(Unknown Source)
-        ... 55 more
-       -->
-      <delete dir="${test.dir}/metastore_db"/>
       
       <!-- <delete dir="${test.logs}"/> -->
       <delete dir="${test.warehouse.dir}"/>
