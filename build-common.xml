@@ -135,9 +135,18 @@
     Fails the build if the check is failed. -->
   <target name="check-clover-ok" if="clover.jar">
     <echo message="Project: ${ant.project.name}"/>
-    <fail message="Property 'clover.jar' is set, but Clover setup was not correctly invoked 
- in the current visibility scope." unless="clover.initstring"/>
+    <antcall target="check-clover-ok-impl" inheritall="true" inheritrefs="true"/>
     <echo message="    Clover init okay, clover.initstring=${clover.initstring}"/>
+  </target>
+  <target name="check-clover-ok-impl">
+    <condition property="clover.ok">
+      <and>
+        <isset property="clover.initstring"/>
+        <isreference refid="clover.config"/>
+      </and>  
+    </condition>
+    <fail message="Property 'clover.jar' is set, but Clover setup was not correctly invoked 
+ in the current visibility scope." unless="clover.ok"/>
   </target>
 
   <!-- depends="with.clover" -->

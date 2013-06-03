@@ -128,6 +128,7 @@
             <property name="thrift.home" value="${thrift.home}"/>
             <property name="build.dir.hive" location="${build.dir.hive}"/>
             <!-- Pass down the Clover properties: -->
+            <reference refid="clover.config"/>
             <reference refid="clover-property-set-id"/>
             <propertyset refid="clover-property-set-id"/>
           </subant>
@@ -238,8 +239,14 @@
   <target name="clover-init" if="clover.jar">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
     <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
-      <!-- Exclude custom Ant tasks from the instrumentation: -->
-      <files excludes="org/apache/hadoop/hive/ant/**/*,org/apache/hcatalog/NoExitSecurityManager*"/>
+      <files>
+        <!-- Exclude custom Ant tasks from the instrumentation: -->
+        <exclude name="org/apache/hadoop/hive/ant/**/*"/>
+        <!-- Exclude NoExitSecurityManager to overcome ClassCircularityError happening in tests runtime.
+        (Tests: org.apache.hcatalog.mapreduce.TestHCatPartitionPublish, org.apache.hcatalog.api.TestHCatClient) 
+        -->
+        <exclude name="org/apache/hcatalog/NoExitSecurityManager.java"/>
+      </files>
     </clover-setup>
     
     <propertyset id="clover-property-set-id">

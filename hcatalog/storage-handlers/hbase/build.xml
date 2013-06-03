@@ -133,12 +133,23 @@
       <antcall target="test-lightweight" inheritall="true" inheritrefs="true"/>
     </target>
 
-    <target name="check-clover-ok" if="clover.jar">
-      <echo message="Project: ${ant.project.name}"/>
-      <fail message="Property 'clover.jar' is set, but Clover setup was not correctly invoked 
- in the current visibility scope." unless="clover.initstring"/>
-      <echo message="    Clover init okay, clover.initstring=${clover.initstring}"/>
-    </target>
+  <!-- Checks correct clover initialization on the current visibility scope. 
+    Fails the build if the check is failed. -->
+  <target name="check-clover-ok" if="clover.jar">
+    <echo message="Project: ${ant.project.name}"/>
+    <antcall target="check-clover-ok-impl" inheritall="true" inheritrefs="true"/>
+    <echo message="    Clover init okay, clover.initstring=${clover.initstring}"/>
+  </target>
+  <target name="check-clover-ok-impl">
+    <condition property="clover.ok">
+      <and>
+        <isset property="clover.initstring"/>
+        <isreference refid="clover.config"/>
+      </and>  
+    </condition>
+    <fail message="Property 'clover.jar' is set, but Clover setup was not correctly invoked 
+ in the current visibility scope." unless="clover.ok"/>
+  </target>
   
 	  <target name="test-lightweight" depends="check-clover-ok">
       <sequential>
