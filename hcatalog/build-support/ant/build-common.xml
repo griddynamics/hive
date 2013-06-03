@@ -94,7 +94,7 @@
 
   <target name="test" depends="jar, compile-test">
     <delete dir="${test.logs}"/>
-    <delete dir="${test.warehouse.dir}"/>
+    <!-- <delete dir="${test.warehouse.dir}"/> -->
   	<antcall target="test-impl" inheritall="true" inheritrefs="true"/>
   </target>
 
