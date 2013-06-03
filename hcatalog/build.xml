@@ -103,10 +103,11 @@
             <ant target="test" dir="storage-handlers/hbase" inheritAll="false"/>
             <!-- One checkstyle run for the whole repo. Runs after junit tests
             to piggyback on resolved jars. -->
-            <path id="checkstyle.class.path">
+            <!-- checkstyle call commented out: -->
+            <!-- <path id="checkstyle.class.path">
                 <fileset dir="core/build/lib/test"/>
             </path>
-            <antcall target="checkstyle" inheritRefs="true"/>
+            <antcall target="checkstyle" inheritRefs="true"/> -->
         </parallel>
     </target>
 
