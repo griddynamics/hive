@@ -143,7 +143,11 @@ public class QTestGenTask extends Task {
 
   private String hadoopVersion;
 
-  private int qfilesBatchSize = 20; // default value
+  /*
+   * Specifies the number of test methods (qfiles) 
+   * per one generated test class.
+   */  
+  private int qfilesBatchSize = 10; // default value
 
   public void setQfilesBatchSize(int qfilesBatchSize) {
     this.qfilesBatchSize = qfilesBatchSize;
