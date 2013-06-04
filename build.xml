@@ -64,6 +64,14 @@
   <property name="mvn.staging.repo.url"
     value="https://repository.apache.org/service/local/staging/deploy/maven2" />
 
+  <!-- Check minimum ant version required -->
+  <fail message="Please use ant version 1.8.0 or greater for building hive.">
+    <condition>
+      <not>
+        <antversion atleast="1.8.0"/>
+      </not>
+    </condition>
+  </fail>
 
   <condition property="is-offline" value="true" else="false">
     <isset property="offline"/>
@@ -73,6 +81,10 @@
 
   <condition property="staging">
     <equals arg1="${mvn.publish.repo}" arg2="staging"/>
+  </condition>
+
+  <condition property="test.halt.on.failure" value="no" else="yes">
+    <equals arg1="${test.continue.on.failure}" arg2="true"/>
   </condition>
 
   <taskdef resource="net/sf/antcontrib/antcontrib.properties">
@@ -322,7 +334,7 @@
 
   <target name="test-shims">
     <echo message="Project: ${ant.project.name}"/>
-    <subant target="test" failonerror="${failonerror}">
+    <subant target="test" failonerror="${test.halt.on.failure}">
       <property name="hadoop.version" value="${hadoop.security.version}"/>
       <property name="hadoop.security.version" value="${hadoop.security.version}"/>
       <fileset dir="${hive.root}/shims" includes="build.xml"/>
@@ -583,7 +595,7 @@
         inheritAll="false"/>
     <mkdir dir="${target.dir}/hcatalog"/>
     <copy todir="${target.dir}/hcatalog">
-        <fileset dir="${hive.root}/hcatalog/build/hcatalog-${version}"/>
+        <fileset dir="${hive.root}/hcatalog/build/hcatalog-${hcatalog.version}"/>
     </copy>
   </target>
 
@@ -738,6 +750,7 @@
       <packageset dir="hcatalog/src/java"/>
       <packageset dir="cli/src/java"/>
       <packageset dir="beeline/src/java"/>
+      <packageset dir="beeline/src/test"/>
       <packageset dir="ql/src/java"/>
       <packageset dir="ql/src/test"/>
       <packageset dir="ql/src/gen/thrift/gen-javabean"/>
@@ -1132,6 +1145,8 @@
           todir="${mvn.jar.dir}" />
     <copy file="${build.dir.hive}/metastore/hive-metastore-${version}.jar"
           todir="${mvn.jar.dir}" />
+    <copy file="${build.dir.hive}/hcatalog/hive-hcatalog-${hcatalog.version}.jar"
+          todir="${mvn.jar.dir}" />
     <copy file="${build.dir.hive}/ql/hive-exec-${version}.jar"
           todir="${mvn.jar.dir}" />
     <copy file="${build.dir.hive}/serde/hive-serde-${version}.jar"
@@ -1160,7 +1175,9 @@
           tofile="${mvn.pom.dir}/hive-jdbc-${version}.pom" />
     <copy file="${build.dir.hive}/metastore/pom.xml"
           tofile="${mvn.pom.dir}/hive-metastore-${version}.pom" />
-    <copy file="${build.dir.hive}/ql/pom.xml"
+    <copy file="${build.dir.hive}/hcatalog/pom.xml"
+          tofile="${mvn.pom.dir}/hive-hcatalog-${hcatalog.version}.pom" />
+        <copy file="${build.dir.hive}/ql/pom.xml"
           tofile="${mvn.pom.dir}/hive-exec-${version}.pom" />
     <copy file="${build.dir.hive}/serde/pom.xml"
           tofile="${mvn.pom.dir}/hive-serde-${version}.pom" />
@@ -1209,8 +1226,9 @@
         <artifact:deploy
             file="${mvn.jar.dir}/hive-${hive.project}-${version}.jar">
           <pom refid="hive.project.pom" />
-          <remoteRepository id="${mvn.staging.repo.id}"
-              url="${mvn.staging.repo.url}" />
+          <remoteRepository
+              id="apache.staging.https"
+              url="https://repository.apache.org/service/local/staging/deploy/maven2" />
           <attach file="${mvn.jar.dir}/hive-${hive.project}-${version}.jar.asc"
                   type="jar.asc"/>
           <attach file="${mvn.pom.dir}/hive-${hive.project}-${version}.pom.asc"
@@ -1269,6 +1287,9 @@
     </antcall>
     <antcall target="maven-publish-artifact">
       <param name="hive.project" value="metastore" />
+    </antcall>
+    <antcall target="maven-publish-artifact">
+      <param name="hive.project" value="hcatalog" />
     </antcall>
     <antcall target="maven-publish-artifact">
       <param name="hive.project" value="serde" />
@@ -1425,6 +1446,16 @@
     <sign-artifact
         input.file="${mvn.jar.dir}/hive-metastore-${version}.pom"
         output.file="${mvn.jar.dir}/hive-metastore-${version}.pom.asc"
+        gpg.passphrase="${gpg.passphrase}"/>
+
+    <!-- hive-hcatalog -->
+    <sign-artifact
+        input.file="${mvn.pom.dir}/hive-hcatalog-${hcatalog.version}.jar"
+        output.file="${mvn.pom.dir}/hive-hcatalog-${hcatalog.version}.jar.asc"
+        gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact
+        input.file="${mvn.pom.dir}/hive-hcatalog-${hcatalog.version}.pom"
+        output.file="${mvn.pom.dir}/hive-hcatalog-${hcatalog.version}.pom.asc"
         gpg.passphrase="${gpg.passphrase}"/>
 
     <!-- hive-serde -->
