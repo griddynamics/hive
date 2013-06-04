@@ -47,8 +47,8 @@ import jline.Completor;
 import jline.ConsoleReader;
 import junit.framework.TestCase;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
@@ -310,11 +310,11 @@ public class TestCliDriverMethods extends TestCase {
     String tmpDir = homeFile.getParentFile().getAbsoluteFile() + File.separator
         + "TestCliDriverMethods";
     homeFile.delete();
-    FileUtils.deleteDirectory(new File(tmpDir));
+    FileUtil.fullyDelete(new File(tmpDir));
     homeFile = new File(tmpDir + File.separator + "bin" + File.separator + CliDriver.HIVERCFILE);
     homeFile.getParentFile().mkdirs();
     homeFile.createNewFile();
-    FileUtils.write(homeFile, "-- init hive file for test ");
+    write(homeFile, "-- init hive file for test ");
     setEnv("HIVE_HOME", homeFile.getParentFile().getParentFile().getAbsolutePath());
     setEnv("HIVE_CONF_DIR", homeFile.getParentFile().getAbsolutePath());
     CliSessionState sessionState = new CliSessionState(new HiveConf());
@@ -331,7 +331,7 @@ public class TestCliDriverMethods extends TestCase {
       assertTrue(data.toString().contains(
           "Putting the global hiverc in $HIVE_HOME/bin/.hiverc is deprecated. " +
               "Please use $HIVE_CONF_DIR/.hiverc instead."));
-      FileUtils.write(homeFile, "bla bla bla");
+      write(homeFile, "bla bla bla");
       // if init file contains incorrect row
       try {
         cliDriver.processInitFiles(sessionState);
@@ -351,11 +351,11 @@ public class TestCliDriverMethods extends TestCase {
       // restore data
       setEnv("HIVE_HOME", oldHiveHome);
       setEnv("HIVE_CONF_DIR", oldHiveConfDir);
-      FileUtils.deleteDirectory(new File(tmpDir));
+      FileUtil.fullyDelete(new File(tmpDir));
     }
 
     File f = File.createTempFile("hive", "test");
-    FileUtils.write(f, "bla bla bla");
+    write(f, "bla bla bla");
     try {
       sessionState.initFiles = Arrays.asList(new String[] {f.getAbsolutePath()});
       CliDriver cliDriver = new CliDriver();
@@ -370,7 +370,14 @@ public class TestCliDriverMethods extends TestCase {
     }
   }
 
+  private void write(File file, String input) throws Exception {
+    FileWriter writer = new FileWriter(file);
+    writer.write(input);
+    writer.flush();
+    writer.close();
+  }
 
+  @SuppressWarnings({"rawtypes", "unchecked"})
   private static void setEnv(String key, String value) throws Exception {
     Class[] classes = Collections.class.getDeclaredClasses();
     Map<String, String> env = (Map<String, String>) System.getenv();
