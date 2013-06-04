@@ -59,10 +59,6 @@
   <property name="rat.build.dir" location="${build.dir.hive}/rat"/>
   <property name="md5sum.format" value="{0}  {1}"/>
   <property name="test.ignore.failures" value="false"/>
-  <!-- Properties for maven repositories -->
-  <property name="mvn.staging.repo.id" value="apache.staging.https"/>
-  <property name="mvn.staging.repo.url"
-    value="https://repository.apache.org/service/local/staging/deploy/maven2" />
 
   <!-- Check minimum ant version required -->
   <fail message="Please use ant version 1.8.0 or greater for building hive.">
