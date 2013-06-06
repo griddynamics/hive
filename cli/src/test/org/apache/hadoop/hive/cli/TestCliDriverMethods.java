@@ -299,7 +299,8 @@ public class TestCliDriverMethods extends TestCase {
       securityManager.resetSecurityManager();
     }
     assertTrue(data.toString().contains(
-        "FAILED: ParseException line 1:4 cannot recognize input near 'database'"));
+        "FAILED: ParseException line 1:4 mismatched input 'database' expecting Identifier near " +
+        "'use' in switch database statement"));
   }
 
   public void testprocessInitFiles() throws Exception {

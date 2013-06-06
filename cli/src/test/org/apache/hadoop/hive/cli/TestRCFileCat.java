@@ -96,41 +96,18 @@ public class TestRCFileCat {
       assertTrue(dataOut.toString().contains("100\t200\t123\t1000\t5.3\thive and hadoop\t\tNULL"));
       assertTrue(dataOut.toString().contains("200\t400\t678\t1000\t4.8\thive and hadoop\t\tTEST"));
       dataOut.reset();
-       params = new String[] { "--start=-10","--file-sizes","file://" + template.getAbsolutePath() };
-      assertEquals(0, fileCat.run(params));
-      assertTrue(dataOut.toString().contains("File size (uncompressed): 105. File size (compressed): 134. Number of rows: 3."));
-      dataOut.reset();
 
-      params = new String[] {"--start=0", "--column-sizes","file://" + template.getAbsolutePath() };
-      assertEquals(0, fileCat.run(params));
-      assertTrue(dataOut.toString().contains("0\t9\t17"));
-      assertTrue(dataOut.toString().contains("1\t9\t17"));
-      assertTrue(dataOut.toString().contains("2\t9\t17"));
-      assertTrue(dataOut.toString().contains("3\t12\t14"));
-      assertTrue(dataOut.toString().contains("4\t9\t17"));
-      assertTrue(dataOut.toString().contains("5\t45\t26"));
-
-
-      dataOut.reset();
-      params = new String[] {"--start=0", "--column-sizes-pretty","file://" + template.getAbsolutePath() };
-      assertEquals(0, fileCat.run(params));
-      assertTrue(dataOut.toString().contains("Column 0: Uncompressed size: 9 Compressed size: 17"));
-      assertTrue(dataOut.toString().contains("Column 1: Uncompressed size: 9 Compressed size: 17"));
-      assertTrue(dataOut.toString().contains("Column 2: Uncompressed size: 9 Compressed size: 17"));
-      assertTrue(dataOut.toString().contains("Column 3: Uncompressed size: 12 Compressed size: 14"));
-      assertTrue(dataOut.toString().contains("Column 4: Uncompressed size: 9 Compressed size: 17"));
-      assertTrue(dataOut.toString().contains("Column 5: Uncompressed size: 45 Compressed size: 26"));
 
       params = new String[] { };
       assertEquals(-1, fileCat.run(params));
-      assertTrue(dataErr.toString().contains("RCFileCat [--start=start_offet] [--length=len] [--verbose] " +
-          "[--column-sizes | --column-sizes-pretty] [--file-sizes] fileName"));
+      assertTrue(dataErr.toString().contains("RCFileCat [--start=start_offet] " +
+      		"[--length=len] [--verbose] fileName"));
 
       dataErr.reset();
       params = new String[] { "--fakeParameter","file://" + template.getAbsolutePath()};
       assertEquals(-1, fileCat.run(params));
-      assertTrue(dataErr.toString().contains("RCFileCat [--start=start_offet] [--length=len] [--verbose] " +
-          "[--column-sizes | --column-sizes-pretty] [--file-sizes] fileName"));
+      assertTrue(dataErr.toString().contains("RCFileCat [--start=start_offet] " +
+      		"[--length=len] [--verbose] fileName"));
 
     } finally {
       // restore  input and output streams
