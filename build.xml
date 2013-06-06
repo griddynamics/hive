@@ -247,6 +247,10 @@
         (Tests: org.apache.hcatalog.mapreduce.TestHCatPartitionPublish, org.apache.hcatalog.api.TestHCatClient) 
         -->
         <exclude name="org/apache/hcatalog/NoExitSecurityManager.java"/>
+        <!-- This is a special junit test runner used in TestBeeLineDriver.vm template.
+        it should not be instrumented since this is just a test runner. 
+        NB: this exclude is temporarily disabled to achive better comparison with prev results. -->
+        <!-- <exclude name="org/apache/hive/testutils/junit/runners/ConcurrentTestRunner.java"/> -->
       </files>
     </clover-setup>
     
