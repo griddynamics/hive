@@ -437,7 +437,6 @@
     </clover-merge>
 
     <antcall target="clover-report" inheritall="true" inheritrefs="true">
-      <param name="initstring" value="hive-clover.db"/>
     </antcall>
   </target>
 
@@ -445,7 +444,9 @@
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
     <typedef resource="cloverlib.xml" classpath="${clover.jar}"/>
     
-    <fail unless="initstring" message="Parameter 'initstring' must be set."/>
+    <property name="initstring"   value="hive-clover.db"/>
+    <property name="html-outfile" value="${build.dir.hive}/clover/report/html"/>
+    <property name="xml-outfile"  value="${build.dir.hive}/clover/report/report.xml"/>
     
     <fileset dir="${basedir}" id="clover.report.fileset">
       <include name="**/*.java"/>
@@ -477,12 +478,12 @@
     
     <mkdir dir="${build.dir.hive}/clover/report/html"/>
     <clover-report initstring="${initstring}">
-      <current outfile="${build.dir.hive}/clover/report/html" title="Hive">
+      <current outfile="${html-outfile}" title="Hive">
         <fileset refid="clover.report.fileset"/>
         <format type="html"/>
         <columns refid="clover.columns"/>
       </current>
-      <current outfile="${build.dir.hive}/clover/report/report.xml" title="Hive">
+      <current outfile="${xml-outfile}" title="Hive">
         <fileset refid="clover.report.fileset"/>
         <format type="xml"/>
         <columns refid="clover.columns"/>
