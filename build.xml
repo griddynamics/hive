@@ -238,6 +238,7 @@
   <!-- Initializes Clover subsystem. -->
   <target name="clover-init" if="clover.jar">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    <!-- initString="build/clover/db/clover.db" relative="true" -->
     <clover-setup initString="${build.dir.hive}/clover/db/clover.db"
       flushpolicy="threaded" flushinterval="10000">
       <files>
@@ -422,29 +423,49 @@
     <iterate target="gen-clover-report" iterate="${iterate.hive.all}" failonerror="false"/>
   </target>
 
-  <fileset dir="${basedir}" id="clover.report.fileset">
-    <include name="**/*.java"/>
-    <exclude name="**/hive/metastore/api/**/*.java"/>
-    <exclude name="**/hive/ql/plan/api/**/*.java"/>
-    <exclude name="**/hive/serde2.dynamic_type/**/*.java"/>
-    <exclude name="**/hive/serde2/dynamic_type/*.java"/>
-    <exclude name="**/hive/service/*.java"/>
-    <exclude name="**/hive/serde2/thrift/test/*.java"/>
-    <exclude name="**/hive/serde/test/*.java"/>
-    <exclude name="**/hive/**/example/**/*.java"/>
-    <exclude name="**/hive/serde2/thrift_test/*.java"/>
-    <exclude name="**/hive/contrib/serde2/*.java"/>
-    <exclude name="**/hive/contrib/serde2/s3/*.java"/>
-    <exclude name="**/hive/contrib/util/typedbytes/*.java"/>
-    <exclude name="**/hive/hwi/*.java"/>
-    <exclude name="**/hive/jdbc/*.java"/>
-    <exclude name="**/hive/scripts/*.java"/>
-    <exclude name="**/hive/pdk/*.java"/>
-  </fileset>
-
-  <target name="clover-aggregate">
+  <target name="clover-aggregate" description="Merges Clover databases and generates Clover xml and html reports.">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
     <typedef resource="cloverlib.xml" classpath="${clover.jar}"/>
+
+    <clover-merge initString="hive-clover.db">
+      <cloverDbSet dir="${build.dir.hive}">
+        <include name="**/clover.db"/>
+        <!-- <include name="**/clover*.db"/> -->
+        <include name="**/clover-baseline.db"/>
+        <include name="**/clover-original.db"/>
+      </cloverDbSet>
+    </clover-merge>
+
+    <antcall target="clover-report" inheritall="true" inheritrefs="true">
+      <param name="initstring" value="hive-clover.db"/>
+    </antcall>
+  </target>
+
+  <target name="clover-report">
+    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    <typedef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    
+    <fail unless="initstring" message="Parameter 'initstring' must be set."/>
+    
+    <fileset dir="${basedir}" id="clover.report.fileset">
+      <include name="**/*.java"/>
+      <exclude name="**/hive/metastore/api/**/*.java"/>
+      <exclude name="**/hive/ql/plan/api/**/*.java"/>
+      <exclude name="**/hive/serde2.dynamic_type/**/*.java"/>
+      <exclude name="**/hive/serde2/dynamic_type/*.java"/>
+      <exclude name="**/hive/service/*.java"/>
+      <exclude name="**/hive/serde2/thrift/test/*.java"/>
+      <exclude name="**/hive/serde/test/*.java"/>
+      <exclude name="**/hive/**/example/**/*.java"/>
+      <exclude name="**/hive/serde2/thrift_test/*.java"/>
+      <exclude name="**/hive/contrib/serde2/*.java"/>
+      <exclude name="**/hive/contrib/serde2/s3/*.java"/>
+      <exclude name="**/hive/contrib/util/typedbytes/*.java"/>
+      <exclude name="**/hive/hwi/*.java"/>
+      <exclude name="**/hive/jdbc/*.java"/>
+      <exclude name="**/hive/scripts/*.java"/>
+      <exclude name="**/hive/pdk/*.java"/>
+    </fileset>
 
     <clover-columns id="clover.columns">
         <totalChildren/>
@@ -453,17 +474,9 @@
         <uncoveredElements format="raw"/>
         <totalPercentageCovered format="longbar"/>
     </clover-columns>
-
-    <clover-merge initString="hive-clover.db">
-      <cloverDbSet dir="${build.dir.hive}">
-        <include name="**/clover.db"/>
-        <include name="**/clover*.db"/>
-        <include name="**/clover-baseline.db"/>
-        <include name="**/clover-original.db"/>
-      </cloverDbSet>
-    </clover-merge>
+    
     <mkdir dir="${build.dir.hive}/clover/report/html"/>
-    <clover-report initstring="hive-clover.db">
+    <clover-report initstring="${initstring}">
       <current outfile="${build.dir.hive}/clover/report/html" title="Hive">
         <fileset refid="clover.report.fileset"/>
         <format type="html"/>
@@ -476,7 +489,7 @@
       </current>
     </clover-report>
   </target>
-
+ 
   <!-- create an html report from junit output files -->
   <target name="testreport"
           description="Generate JUnit HTML test report">
