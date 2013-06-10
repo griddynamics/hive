@@ -151,7 +151,7 @@
  in the current visibility scope." unless="clover.ok"/>
   </target>
   
-	  <target name="test-lightweight" depends="check-clover-ok">
+	  <target name="test-lightweight" >
       <sequential>
         <delete dir="${test.tmp.dir}" />
         <delete dir="${test.data.dir}" />

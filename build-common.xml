@@ -263,8 +263,7 @@
     </copy>
   </target>
 
-  <!-- with.clover -->
-  <target name="init" depends="create-dirs, check-clover-ok">
+  <target name="init" depends="create-dirs">
     <echo message="Project: ${ant.project.name}"/>
   </target>
 
@@ -458,7 +457,7 @@
   </target>
 	
 	<!-- delegate target to be invoked w/o "test" target dependencies: -->
-	<target name="test-impl" depends="check-clover-ok">
+	<target name="test-impl" >
     <echo message="Project: ${ant.project.name}"/>
 		
     <property name="hadoop.testcp" refid="test.classpath"/>

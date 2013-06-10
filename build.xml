@@ -222,7 +222,7 @@
     <ivy:cleancache />
   </target>
 
-  <target name="init" depends="ivy-init-antlib,deploy-ant-tasks">
+  <target name="init" depends="ivy-init-antlib,deploy-ant-tasks,clover-init">
     <echo message="Project: ${ant.project.name}"/>
     <iterate target="init" iterate="${iterate.hive.all}"/>
   </target>
@@ -238,8 +238,11 @@
   <!-- Initializes Clover subsystem. -->
   <target name="clover-init" if="clover.jar">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
-    <!-- initString="build/clover/db/clover.db" relative="true" -->
-    <clover-setup initString="${build.dir.hive}/clover/db/clover.db"
+    <!-- NB: flushpolicy="threaded" is set to make the clover flushing more reliable.
+      With the default policy ("directed") we typically have some errors upon reading the 
+      coverage records. -->
+    <clover-setup
+      initString="${build.dir.hive}/clover/db/clover.db"
       flushpolicy="threaded" flushinterval="10000">
       <files>
         <!-- Exclude custom Ant tasks from the instrumentation: -->
@@ -263,13 +266,10 @@
   </target>
   
   <!-- target to deploy anttasks -->
-  <target name="compile-ant-tasks" depends="clover-init">
+  <target name="compile-ant-tasks">
     <echo message="Project: ${ant.project.name}"/>
     <subant target="compile" failonerror="true">
       <fileset dir="." includes="ant/build.xml"/>
-      <reference refid="clover.config"/>
-      <reference refid="clover-property-set-id"/>
-      <propertyset refid="clover-property-set-id"/>
     </subant>
   </target>
 
@@ -349,15 +349,12 @@
     </antcall>
   </target>
 
-  <target name="test-lightweight" depends="clover-init" 
+  <target name="test-lightweight"  
     description="Runs tests without any regeneration/rebuilding. 
  This target can be invoked directly. Useful in distributed builds to run batches of tests.">
     <antcall target="test-impl" inheritall="true" inheritrefs="true">
       <!-- "test-lightweight" value of "test-target" to run the tests without rebuilding: -->
       <param name="test-target" value="test-lightweight"/>
-      <reference refid="clover.config"/>
-      <reference refid="clover-property-set-id"/>
-      <propertyset refid="clover-property-set-id"/>
     </antcall>
   </target>  
   
@@ -430,8 +427,6 @@
     <clover-merge initString="hive-clover.db">
       <cloverDbSet dir="${build.dir.hive}">
         <include name="**/clover.db"/>
-        <include name="**/clover-self-merged-*.db"/>
-        <!-- <include name="**/clover*.db"/> -->
         <include name="**/clover-baseline.db"/>
         <include name="**/clover-original.db"/>
       </cloverDbSet>
