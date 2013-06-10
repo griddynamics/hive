@@ -163,7 +163,6 @@
         <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no"
                  fork="yes" maxmemory="512m" dir="${basedir}" timeout="${test.timeout}"
                  errorProperty="tests.failed" failureProperty="tests.failed">
-              <sysproperty key="clover.initstring.prefix" value="${clover.initstring.prefix}"/>
               <classpath>
                   <pathelement location="${test.build.classes}" />
                   <pathelement location="." />

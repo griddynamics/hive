@@ -238,9 +238,11 @@
   <!-- Initializes Clover subsystem. -->
   <target name="clover-init" if="clover.jar">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
-    <!-- initString="${build.dir.hive}/clover/db/clover.db" -->
-    <clover-setup 
-      initstring="build/clover/db/clover.db" relative="true"
+    <!-- NB: flushpolicy="threaded" is set to make the clover flushing more reliable.
+      With the default policy ("directed") we typically have some errors upon reading the 
+      coverage records. -->
+    <clover-setup
+      initString="${build.dir.hive}/clover/db/clover.db"
       flushpolicy="threaded" flushinterval="10000">
       <files>
         <!-- Exclude custom Ant tasks from the instrumentation: -->
