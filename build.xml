@@ -238,8 +238,9 @@
   <!-- Initializes Clover subsystem. -->
   <target name="clover-init" if="clover.jar">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
-    <!-- initString="build/clover/db/clover.db" relative="true" -->
-    <clover-setup initString="${build.dir.hive}/clover/db/clover.db"
+    <!-- initString="${build.dir.hive}/clover/db/clover.db" -->
+    <clover-setup 
+      initString="build/clover/db/clover.db" relative="true"
       flushpolicy="threaded" flushinterval="10000">
       <files>
         <!-- Exclude custom Ant tasks from the instrumentation: -->
