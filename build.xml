@@ -367,6 +367,9 @@
       <else>
         <antcall target="test-shims">
           <param name="hadoop.version.ant-internal" value="${hadoop.security.version}" />
+          <reference refid="clover.config"/>
+          <reference refid="clover-property-set-id"/>
+          <propertyset refid="clover-property-set-id"/>
         </antcall>
       </else>
     </if>
@@ -383,6 +386,9 @@
               <property name="build.dir.hive" location="${build.dir.hive}"/>
               <property name="is-offline" value="${is-offline}"/>
               <property name="test-target" value="${test-target}"/>
+              <reference refid="clover.config"/>
+              <reference refid="clover-property-set-id"/>
+              <propertyset refid="clover-property-set-id"/>
             </ant>
           </try>
           <catch>
@@ -403,6 +409,9 @@
     <subant target="${test-target}" failonerror="${test.halt.on.failure}">
       <property name="hadoop.version" value="${hadoop.security.version}"/>
       <property name="hadoop.security.version" value="${hadoop.security.version}"/>
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
       <fileset dir="${hive.root}/shims" includes="build.xml"/>
     </subant>
   </target>
@@ -418,7 +427,6 @@
     <clover-merge initString="hive-clover.db">
       <cloverDbSet dir="${build.dir.hive}">
         <include name="**/clover.db"/>
-        <!-- <include name="**/clover*.db"/> -->
         <include name="**/clover-baseline.db"/>
         <include name="**/clover-original.db"/>
       </cloverDbSet>

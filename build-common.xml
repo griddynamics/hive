@@ -263,7 +263,6 @@
     </copy>
   </target>
 
-  <!-- with.clover -->
   <target name="init" depends="create-dirs">
     <echo message="Project: ${ant.project.name}"/>
   </target>

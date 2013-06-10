@@ -51,19 +51,6 @@ to call at top-level: ant deploy-contrib compile-core-test
     </copy>
   </target>
 
-  <!-- target to run the tests -->
-  <!-- <target name="test"
-  	depends="test-conditions,gen-test,compile-test,test-jar,test-init">
-    <antcall target="test-impl" inheritall="true" inheritrefs="true"/>
-  </target> -->
-  
-  <!-- with.clover -->
-  <!-- <target name="test-lightweight"
-    depends="test-init,test-conditions">
-    <antcall target="test-impl" inheritall="true" inheritrefs="true"/>
-  </target> -->
-	
-  <!-- depends="check-clover-ok" -->
 	<target name="test-impl" >
     <echo message="Project: ${ant.project.name}"/>
     <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no"
