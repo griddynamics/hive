@@ -120,7 +120,8 @@
  in the current visibility scope." unless="clover.ok"/>
   </target>
     
-  <target name="test-impl" depends="check-clover-ok">
+  <!-- depends="check-clover-ok" -->
+  <target name="test-impl" >
     <echo message="Project: ${ant.project.name}"/>
     <_junit srcDir="${basedir}/src/test/java"/>
   </target>

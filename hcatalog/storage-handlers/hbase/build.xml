@@ -151,7 +151,8 @@
  in the current visibility scope." unless="clover.ok"/>
   </target>
   
-	  <target name="test-lightweight" depends="check-clover-ok">
+    <!-- depends="check-clover-ok" -->
+	  <target name="test-lightweight" >
       <sequential>
         <delete dir="${test.tmp.dir}" />
         <delete dir="${test.data.dir}" />
@@ -162,6 +163,7 @@
         <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no"
                  fork="yes" maxmemory="512m" dir="${basedir}" timeout="${test.timeout}"
                  errorProperty="tests.failed" failureProperty="tests.failed">
+              <sysproperty key="clover.initstring.prefix" value="${clover.initstring.prefix}"/>
               <classpath>
                   <pathelement location="${test.build.classes}" />
                   <pathelement location="." />

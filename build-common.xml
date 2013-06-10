@@ -264,7 +264,7 @@
   </target>
 
   <!-- with.clover -->
-  <target name="init" depends="create-dirs, check-clover-ok">
+  <target name="init" depends="create-dirs">
     <echo message="Project: ${ant.project.name}"/>
   </target>
 
@@ -458,7 +458,7 @@
   </target>
 	
 	<!-- delegate target to be invoked w/o "test" target dependencies: -->
-	<target name="test-impl" depends="check-clover-ok">
+	<target name="test-impl" >
     <echo message="Project: ${ant.project.name}"/>
 		
     <property name="hadoop.testcp" refid="test.classpath"/>
@@ -528,6 +528,7 @@
       <sysproperty key="hadoop.bin.path" value="${test.hadoop.bin.path}${junit.script.extension}"/>
       <sysproperty key="test.concurrency.num.threads" value="${test.concurrency.num.threads}"/>
       <sysproperty key="clover.jar" value="${clover.jar}"/>
+      <sysproperty key="clover.initstring.prefix" value="${clover.initstring.prefix}"/>
       <jvmarg line="${junit.jvm.args}"/>
 
       <classpath refid="test.local.classpath"/>
