@@ -446,6 +446,7 @@
     
     <fileset dir="${basedir}" id="clover.report.fileset">
       <include name="**/*.java"/>
+  <!-- 
       <exclude name="**/hive/metastore/api/**/*.java"/>
       <exclude name="**/hive/ql/plan/api/**/*.java"/>
       <exclude name="**/hive/serde2.dynamic_type/**/*.java"/>
@@ -461,7 +462,7 @@
       <exclude name="**/hive/hwi/*.java"/>
       <exclude name="**/hive/jdbc/*.java"/>
       <exclude name="**/hive/scripts/*.java"/>
-      <exclude name="**/hive/pdk/*.java"/>
+      <exclude name="**/hive/pdk/*.java"/> -->
     </fileset>
 
     <clover-columns id="clover.columns">
