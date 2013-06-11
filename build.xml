@@ -472,7 +472,7 @@
         <totalPercentageCovered format="longbar"/>
     </clover-columns>
     
-    <mkdir dir="${build.dir.hive}/clover/report/html"/>
+    <mkdir dir="${html-outfile}/"/>
     <clover-report initstring="${initstring}">
       <current outfile="${html-outfile}" title="Hive">
         <fileset refid="clover.report.fileset"/>
