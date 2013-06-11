@@ -243,7 +243,7 @@
       coverage records. -->
     <clover-setup
       initString="${build.dir.hive}/clover/db/clover.db"
-      flushpolicy="threaded" flushinterval="10000">
+      flushpolicy="threaded" flushinterval="5000">
       <files>
         <!-- Exclude custom Ant tasks from the instrumentation: -->
         <exclude name="org/apache/hadoop/hive/ant/**/*"/>
