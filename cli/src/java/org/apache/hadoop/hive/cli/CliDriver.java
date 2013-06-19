@@ -690,7 +690,7 @@ public class CliDriver {
    * @return status of the CLI comman execution
    * @throws Exception
    */
-  private static int executeDriver(CliSessionState ss, HiveConf conf, OptionsProcessor oproc)
+  private  int executeDriver(CliSessionState ss, HiveConf conf, OptionsProcessor oproc)
       throws Exception {
 
     // connect to Hive Server
