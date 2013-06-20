@@ -385,6 +385,10 @@
               <property name="build.dir.hive" location="${build.dir.hive}"/>
               <property name="is-offline" value="${is-offline}"/>
               <property name="test-target" value="${test-target}"/>
+              <!-- NB: Clover properties are not needed in test runtime. 
+               However, passing down Clover properties is needed there in case if
+               "test-target" == "test", in which case "test" target in submodules may
+               recompile the project and/or tests. -->
               <reference refid="clover.config"/>
               <reference refid="clover-property-set-id"/>
               <propertyset refid="clover-property-set-id"/>

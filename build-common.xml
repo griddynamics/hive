@@ -149,7 +149,6 @@
  in the current visibility scope." unless="clover.ok"/>
   </target>
 
-  <!-- depends="with.clover" -->
   <target name="gen-clover-report" depends="check-clover-ok">
     <mkdir dir="${build.dir.hive}/clover/report/html"/>
     <mkdir dir="${build.dir.hive}/clover/report/html/${ant.project.name}"/>
@@ -446,13 +445,9 @@
   </target>
   
   <!-- target to run the tests without test rebuilding. It has reduced set of dependencies. -->
-  <!-- with.clover -->
   <target name="test-lightweight" depends="test-init,test-conditions">
     <echo message="Project: ${ant.project.name}"/>
     <antcall target="test-impl" inheritall="true" inheritrefs="true">
-      <reference refid="clover.config"/>
-      <reference refid="clover-property-set-id"/>
-      <propertyset refid="clover-property-set-id"/>
     </antcall>
   </target>
 	
