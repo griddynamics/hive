@@ -23,19 +23,17 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.StringTokenizer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.regex.Pattern;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.tools.ant.AntClassLoader;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Task;
-import org.apache.tools.ant.Project;
 
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.Template;
@@ -47,8 +45,8 @@ import org.apache.velocity.runtime.RuntimeConstants;
 
 public class QTestGenTask extends Task {
 
-  public class QFileFilter implements FileFilter {
-  
+  public static class QFileFilter implements FileFilter {
+    @Override
     public boolean accept(File fpath) {
       if (fpath.isDirectory() ||
           !fpath.getName().endsWith(".q")) {
@@ -56,22 +54,23 @@ public class QTestGenTask extends Task {
       }
       return true;
     }
-    
   }
   
-  public class DisabledQFileFilter implements FileFilter { 
+  public static class DisabledQFileFilter implements FileFilter {
+    @Override
     public boolean accept(File fpath) {
       return !fpath.isDirectory() && fpath.getName().endsWith(".q.disabled");
     }  
   }
   
-  public class QFileRegexFilter extends QFileFilter {
+  public static class QFileRegexFilter extends QFileFilter {
     Pattern filterPattern;
     
     public QFileRegexFilter(String filter) {
       filterPattern = Pattern.compile(filter);
     }
     
+    @Override
     public boolean accept(File filePath) {
       if (!super.accept(filePath)) {
         return false;
@@ -108,6 +107,13 @@ public class QTestGenTask extends Task {
   private String runDisabled;
   
   private String hadoopVersion;
+  
+  private String hiveRootDirectory;
+  /*
+   * Specifies the number of test methods (qfiles) 
+   * per one generated test class.
+   */  
+  private int qfilesBatchSize = 10; // default value
 
   public void setHadoopVersion(String ver) {
     this.hadoopVersion = ver;
@@ -229,44 +235,47 @@ public class QTestGenTask extends Task {
     return queryFileRegex;
   }
 
-  public void execute() throws BuildException {
+  public void setQfilesBatchSize(int qfilesBatchSize) {
+    this.qfilesBatchSize = qfilesBatchSize;
+  }
 
+  public int getQfilesBatchSize() {
+    return qfilesBatchSize;
+  }
+
+  @Override
+  public void execute() throws BuildException {
     if (getTemplatePath().equals("")) {
       throw new BuildException("No templatePath attribute specified");
     }
-
     if (template == null) {
       throw new BuildException("No template attribute specified");
     }
-
     if (outputDirectory == null) {
       throw new BuildException("No outputDirectory specified");
     }
-
     if (queryDirectory == null && queryFile == null ) {
       throw new BuildException("No queryDirectory or queryFile specified");
     }
-
     if (logDirectory == null) {
       throw new BuildException("No logDirectory specified");
     }
-
     if (resultsDirectory == null) {
       throw new BuildException("No resultsDirectory specified");
     }
-
     if (className == null) {
       throw new BuildException("No className specified");
     }
 
     List<File> qFiles = new ArrayList<File>();
     HashMap<String, String> qFilesMap = new HashMap<String, String>();
+    File inpDir = null;
+    File hiveRootDir = null;
     File outDir = null;
     File resultsDir = null;
     File logDir = null;
     
     try {
-      File inpDir = null;
       if (queryDirectory != null) {
         inpDir = new File(queryDirectory);
       }
@@ -299,6 +308,12 @@ public class QTestGenTask extends Task {
         }
       }
       
+      hiveRootDir = new File(hiveRootDirectory);
+      if (!hiveRootDir.exists()) {
+        throw new BuildException("Hive Root Directory "
+            + hiveRootDir.getCanonicalPath() + " does not exist");
+      }
+      
       Collections.sort(qFiles);
       for (File qFile : qFiles) {
         qFilesMap.put(qFile.getName(), getEscapedCanonicalPath(qFile));
@@ -323,48 +338,32 @@ public class QTestGenTask extends Task {
     } catch (Exception e) {
       throw new BuildException(e);
     }
-    
-    VelocityEngine ve = new VelocityEngine();
 
     try {
-      ve.setProperty(RuntimeConstants.FILE_RESOURCE_LOADER_PATH, getTemplatePath());
-      if (logFile != null) {
-        File lf = new File(logFile);
-        if (lf.exists()) {
-          if (!lf.delete()) {
-            throw new Exception("Could not delete log file " + lf.getCanonicalPath());
-          }
+      log("Total qfiles = " + qFiles.size());
+      log("qfiles batch size = " + qfilesBatchSize);
+      int totalBatches = qFiles.size() / qfilesBatchSize;
+      if ((qFiles.size() % qfilesBatchSize) > 0) {
+        totalBatches++;
+      }
+      log("Total batches expected = " + totalBatches);
+      final int maxDigits = Integer.toString(totalBatches).length();
+      final SimplifiedIterator<List<File>> simplifiedIterator
+        = new EvenBatchSimplifiedIterator<File>(qFiles, qfilesBatchSize);
+      List<File> qFilesSublist;
+      int batchNum = 0;
+      while (true) {
+        qFilesSublist = simplifiedIterator.next();
+        if (qFilesSublist == null) {
+          break;
+        } else {
+          batchNum++;
+          String batchNumId = formatIntToLength(batchNum, maxDigits);
+          log("Generating test class "+batchNumId+"...");
+          generateImpl(hiveRootDir, inpDir, qFilesSublist, qFilesMap, resultsDir, logDir, outDir, batchNumId);
         }
-
-        ve.setProperty(RuntimeConstants.RUNTIME_LOG, logFile);
       }
-
-      ve.init();
-      Template t = ve.getTemplate(template);
-
-      if (clusterMode == null) {
-        clusterMode = new String("");
-      }
-      if (hadoopVersion == null) {
-        hadoopVersion = "";
-      }
-
-      // For each of the qFiles generate the test
-      VelocityContext ctx = new VelocityContext();
-      ctx.put("className", className);
-      ctx.put("qfiles", qFiles);
-      ctx.put("qfilesMap", qFilesMap);
-      ctx.put("resultsDir", getEscapedCanonicalPath(resultsDir));
-      ctx.put("logDir", getEscapedCanonicalPath(logDir));
-      ctx.put("clusterMode", clusterMode);
-      ctx.put("hadoopVersion", hadoopVersion);
-
-      File outFile = new File(outDir, className + ".java");
-      FileWriter writer = new FileWriter(outFile);
-      t.merge(ctx, writer);
-      writer.close();
-
-      System.out.println("Generated " + outFile.getCanonicalPath() + " from template " + template);
+      log(batchNum+" batches generated.");
     } catch(BuildException e) {
       throw e;
     } catch(MethodInvocationException e) {
@@ -391,5 +390,97 @@ public class QTestGenTask extends Task {
       return file.getCanonicalPath().replace("\\", "\\\\");
     }
     return file.getCanonicalPath();
+  }
+
+  public void setHiveRootDirectory(File hiveRootDirectory) {
+    try {
+      this.hiveRootDirectory = hiveRootDirectory.getCanonicalPath();
+    } catch (IOException ioe) {
+      throw new BuildException(ioe);
+    }
+  }
+  
+  public String getHiveRootDirectory() {
+    return hiveRootDirectory;
+  }
+      
+  private String formatIntToLength(int num, int len) {
+    String result = Integer.toString(num);
+    while (result.length() < len) {
+       result = "0" + result;
+    }
+    return result;
+  }
+
+  private void generateImpl(File hiveRootDir, File queryDir,
+      List<File> qFiles, Map<String, String> qFilesMap, File resultsDir, File logDir, File outDir,
+      String suffix) throws Exception {
+    final VelocityEngine ve = new VelocityEngine();
+    ve.setProperty(RuntimeConstants.FILE_RESOURCE_LOADER_PATH, getTemplatePath());
+    if (logFile != null) {
+      File lf = new File("batch-" +suffix + "-" + logFile);
+      if (lf.exists()) {
+        if (!lf.delete()) {
+          throw new Exception("Could not delete log file " + lf.getCanonicalPath());
+        }
+      }
+      ve.setProperty(RuntimeConstants.RUNTIME_LOG, logFile);
+    }
+
+    ve.init();
+    Template t = ve.getTemplate(template);
+
+    if (clusterMode == null) {
+      clusterMode = new String("");
+    }
+    if (hadoopVersion == null) {
+      hadoopVersion = "";
+    }
+
+    // For each of the qFiles generate the test
+    final VelocityContext ctx = new VelocityContext();
+    ctx.put("className", className + suffix);
+    ctx.put("hiveRootDir", getEscapedCanonicalPath(hiveRootDir));
+    ctx.put("queryDir", getEscapedCanonicalPath(queryDir));
+    ctx.put("qfiles", qFiles);
+    ctx.put("qfilesMap", qFilesMap);
+    ctx.put("resultsDir", getEscapedCanonicalPath(resultsDir));
+    ctx.put("logDir", getEscapedCanonicalPath(logDir));
+    ctx.put("clusterMode", clusterMode);
+    ctx.put("hadoopVersion", hadoopVersion);
+
+    File outFile = new File(outDir, className + suffix + ".java");
+    FileWriter writer = new FileWriter(outFile);
+    try {
+      t.merge(ctx, writer);
+    } finally {
+      writer.close();
+    }
+
+    log("Generated " + outFile.getCanonicalPath() + " from template " + template);
+  }
+
+  static interface SimplifiedIterator <T> {
+    T next();
+  }
+
+  static class EvenBatchSimplifiedIterator <T> implements SimplifiedIterator<List<T>> {
+    protected final List<T> baseList;
+    protected final int groupSize;
+    private int nextStartIndex = 0;
+    EvenBatchSimplifiedIterator(List<T> baseList0, int groupSize0) {
+      baseList = baseList0;
+      groupSize = groupSize0;
+    }
+    @Override
+    public List<T> next() {
+      if (nextStartIndex < baseList.size()) {
+        int toIndex = Math.min(baseList.size(), nextStartIndex + groupSize);
+        List<T> testGroupSubList = baseList.subList(nextStartIndex, toIndex);
+        nextStartIndex += groupSize;
+        return testGroupSubList;
+      }
+      return null;
+    }
   }
 }

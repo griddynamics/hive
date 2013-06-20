@@ -46,7 +46,8 @@
     <taskdef name="qtestgen" classname="org.apache.hadoop.hive.ant.QTestGenTask"
              classpath="${build.dir.hive}/anttasks/hive-anttasks-${version}.jar:${build.ivy.lib.dir}/default/velocity-${velocity.version}.jar:${build.ivy.lib.dir}/default/commons-collections-${commons-collections.version}.jar:${build.ivy.lib.dir}/default/commons-lang-${commons-lang.version}.jar:${build.ivy.lib.dir}/default/derby-${derby.version}.jar"/>
     
-    <qtestgen outputDirectory="${test.build.src}/org/apache/hadoop/hive/ql/parse" 
+    <qtestgen hiveRootDirectory="${hive.root}"
+              outputDirectory="${test.build.src}/org/apache/hadoop/hive/ql/parse" 
               templatePath="${ql.test.template.dir}" template="TestParse.vm" 
               queryDirectory="${ql.test.query.dir}/positive"
               queryFile="${qfile}"
@@ -57,7 +58,8 @@
               hadoopVersion="${hadoopVersion}"
               logDirectory="${test.log.dir}/positive"/>
     
-    <qtestgen outputDirectory="${test.build.src}/org/apache/hadoop/hive/ql/parse" 
+    <qtestgen hiveRootDirectory="${hive.root}"
+              outputDirectory="${test.build.src}/org/apache/hadoop/hive/ql/parse" 
               templatePath="${ql.test.template.dir}" template="TestParseNegative.vm" 
               queryDirectory="${ql.test.query.dir}/negative" 
               queryFile="${qfile}"
@@ -68,7 +70,8 @@
               hadoopVersion="${hadoopVersion}"
               logDirectory="${test.log.dir}/negative"/>
 
-    <qtestgen outputDirectory="${test.build.src}/org/apache/hadoop/hive/cli" 
+    <qtestgen hiveRootDirectory="${hive.root}"
+              outputDirectory="${test.build.src}/org/apache/hadoop/hive/cli" 
               templatePath="${ql.test.template.dir}" template="TestCliDriver.vm" 
               queryDirectory="${ql.test.query.clientpositive.dir}" 
               queryFile="${qfile}"
@@ -87,7 +90,8 @@
         <matches string="${hadoop.version.ant-internal}" pattern="^0\.17\..*" />
       </not>
       <then>
-        <qtestgen outputDirectory="${test.build.src}/org/apache/hadoop/hive/cli" 
+        <qtestgen hiveRootDirectory="${hive.root}"
+                  outputDirectory="${test.build.src}/org/apache/hadoop/hive/cli" 
                   templatePath="${ql.test.template.dir}" template="TestCliDriver.vm" 
                   queryDirectory="${ql.test.query.clientpositive.dir}" 
                   queryFile="${minimr.query.files}"
@@ -100,7 +104,8 @@
                   hadoopVersion="${hadoopVersion}"
                   />
 
-        <qtestgen outputDirectory="${test.build.src}/org/apache/hadoop/hive/cli" 
+        <qtestgen hiveRootDirectory="${hive.root}"
+                  outputDirectory="${test.build.src}/org/apache/hadoop/hive/cli" 
                   templatePath="${ql.test.template.dir}" template="TestNegativeCliDriver.vm" 
                   queryDirectory="${ql.test.query.dir}/clientnegative" 
                   queryFile="${minimr.query.negative.files}"
@@ -115,7 +120,8 @@
       </then>
     </if>
 
-    <qtestgen outputDirectory="${test.build.src}/org/apache/hadoop/hive/cli" 
+    <qtestgen hiveRootDirectory="${hive.root}"
+              outputDirectory="${test.build.src}/org/apache/hadoop/hive/cli" 
               templatePath="${ql.test.template.dir}" template="TestNegativeCliDriver.vm" 
               queryDirectory="${ql.test.query.dir}/clientnegative" 
               queryFile="${qfile}"
