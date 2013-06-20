@@ -168,7 +168,7 @@ public class QTestGenTask extends Task {
     for (String relativePath : templatePath.split(",")) {
       templatePaths.add(project.resolveFile(relativePath).getCanonicalPath());
     }
-    System.out.println("Template Path:" + getTemplatePath());
+    log("Template Path: " + getTemplatePath());
   }
 
   public String getTemplatePath() {
