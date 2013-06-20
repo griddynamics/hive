@@ -32,12 +32,12 @@ import java.util.Map;
 import java.util.Set;
 
 import jline.ArgumentCompletor;
-import jline.ArgumentCompletor.AbstractArgumentDelimiter;
-import jline.ArgumentCompletor.ArgumentDelimiter;
 import jline.Completor;
 import jline.ConsoleReader;
 import jline.History;
 import jline.SimpleCompletor;
+import jline.ArgumentCompletor.AbstractArgumentDelimiter;
+import jline.ArgumentCompletor.ArgumentDelimiter;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -615,7 +615,7 @@ public class CliDriver {
     System.exit(ret);
   }
 
-  public  int run(String[] args) throws Exception {
+  public int run(String[] args) throws Exception {
 
     OptionsProcessor oproc = new OptionsProcessor();
     if (!oproc.process_stage1(args)) {
@@ -771,8 +771,9 @@ public class CliDriver {
   }
 
   protected ConsoleReader getConsoleReader() throws IOException{
-  return new ConsoleReader();
+    return new ConsoleReader();
   }
+
   /**
    * Retrieve the current database name string to display, based on the
    * configuration value.
