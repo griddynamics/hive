@@ -222,7 +222,7 @@ public class QTestGenTask extends Task {
     for (String relativePath : templatePath.split(",")) {
       templatePaths.add(project.resolveFile(relativePath).getCanonicalPath());
     }
-    System.out.println("Template Path:" + getTemplatePath());
+    log("Template Path: " + getTemplatePath());
   }
 
   public String getTemplatePath() {
@@ -502,7 +502,7 @@ public class QTestGenTask extends Task {
       writer.close();
     }
 
-    System.out.println("Generated " + outFile.getCanonicalPath() + " from template " + template);
+    log("Generated " + outFile.getCanonicalPath() + " from template " + template);
   }
 
   private static String getEscapedCanonicalPath(File file) throws IOException {
