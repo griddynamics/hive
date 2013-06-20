@@ -129,40 +129,63 @@
 
     <!-- Run the unit tests -->
     <target name="test" depends="compile-test">
-        <sequential>
-            <delete dir="${test.log.dir}"/>
-	        <delete dir="${test.tmp.dir}" />
-            <delete dir="${test.data.dir}" />
-            <mkdir dir="${test.log.dir}"/>
-	        <mkdir dir="${test.tmp.dir}" />
-            <mkdir dir="${test.data.dir}" />
-	        <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no"
-                   fork="yes" maxmemory="512m" dir="${basedir}" timeout="${test.timeout}"
-                   errorProperty="tests.failed" failureProperty="tests.failed">
-                <classpath>
-                    <pathelement location="${test.build.classes}" />
-                    <pathelement location="." />
-                    <path refid="test.class.path"/>
-                    <pathelement path="${clover.jar}"/>
-                </classpath>
-                <formatter type="${test.junit.output.format}" />
-                <!-- If the user has not defined a particular test to run, run them all -->
-                <batchtest fork="yes" todir="${test.log.dir}" unless="testcase">
-                    <fileset dir="src/test" includes="**/Test*.java"/>
-                    <fileset dir="src/test" includes="**/lock/*Test.java"/>
-                </batchtest>
-                <!-- Run one test case.  To use this define -Dtestcase=X on the command line -->
-                <batchtest fork="yes" todir="${test.log.dir}" if="testcase">
-                    <fileset dir="src/test" includes="**/${testcase}.java"/>
-                </batchtest>
-                <assertions>
-                    <enable />
-                </assertions>
-            </junit>
-            <fail if="tests.failed">Tests failed!</fail>
-        </sequential>
+      <delete dir="${test.log.dir}"/>
+      <antcall target="test-lightweight" inheritall="true" inheritrefs="true"/>
     </target>
 
+  <!-- Checks correct clover initialization on the current visibility scope. 
+    Fails the build if the check is failed. -->
+  <target name="check-clover-ok" if="clover.jar">
+    <echo message="Project: ${ant.project.name}"/>
+    <antcall target="check-clover-ok-impl" inheritall="true" inheritrefs="true"/>
+    <echo message="    Clover init okay, clover.initstring=${clover.initstring}"/>
+  </target>
+  <target name="check-clover-ok-impl">
+    <condition property="clover.ok">
+      <and>
+        <isset property="clover.initstring"/>
+        <isreference refid="clover.config"/>
+      </and>  
+    </condition>
+    <fail message="Property 'clover.jar' is set, but Clover setup was not correctly invoked 
+ in the current visibility scope." unless="clover.ok"/>
+  </target>
+  
+	  <target name="test-lightweight" >
+      <sequential>
+        <delete dir="${test.tmp.dir}" />
+        <delete dir="${test.data.dir}" />
+
+        <mkdir dir="${test.log.dir}"/>
+        <mkdir dir="${test.tmp.dir}" />
+        <mkdir dir="${test.data.dir}" />
+        <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no"
+                 fork="yes" maxmemory="512m" dir="${basedir}" timeout="${test.timeout}"
+                 errorProperty="tests.failed" failureProperty="tests.failed">
+              <classpath>
+                  <pathelement location="${test.build.classes}" />
+                  <pathelement location="." />
+                  <path refid="test.class.path"/>
+                  <pathelement path="${clover.jar}"/>
+              </classpath>
+              <formatter type="${test.junit.output.format}" />
+              <!-- If the user has not defined a particular test to run, run them all -->
+              <batchtest fork="yes" todir="${test.log.dir}" unless="testcase">
+                  <fileset dir="src/test" includes="**/Test*.java"/>
+                  <fileset dir="src/test" includes="**/lock/*Test.java"/>
+              </batchtest>
+              <!-- Run one test case.  To use this define -Dtestcase=X on the command line -->
+              <batchtest fork="yes" todir="${test.log.dir}" if="testcase">
+                  <fileset dir="src/test" includes="**/${testcase}.java,${testcase-list}"/>
+              </batchtest>
+              <assertions>
+                  <enable />
+              </assertions>
+          </junit>
+          <fail if="tests.failed">Tests failed!</fail>
+      </sequential>
+    </target>	
+	
     <!--
     ================================================================================
     Clean Section

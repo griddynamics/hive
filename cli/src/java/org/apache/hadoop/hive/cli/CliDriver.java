@@ -611,11 +611,11 @@ public class CliDriver {
   }
 
   public static void main(String[] args) throws Exception {
-    int ret = run(args);
+    int ret = new CliDriver().run(args);
     System.exit(ret);
   }
 
-  public static int run(String[] args) throws Exception {
+  public int run(String[] args) throws Exception {
 
     OptionsProcessor oproc = new OptionsProcessor();
     if (!oproc.process_stage1(args)) {
@@ -716,7 +716,7 @@ public class CliDriver {
       return 3;
     }
 
-    ConsoleReader reader = new ConsoleReader();
+    ConsoleReader reader =  getConsoleReader();
     reader.setBellEnabled(false);
     // reader.setDebug(new PrintWriter(new FileWriter("writer.debug", true)));
     for (Completor completor : getCommandCompletor()) {
@@ -768,6 +768,10 @@ public class CliDriver {
     ss.close();
 
     return ret;
+  }
+
+  protected ConsoleReader getConsoleReader() throws IOException{
+    return new ConsoleReader();
   }
 
   /**

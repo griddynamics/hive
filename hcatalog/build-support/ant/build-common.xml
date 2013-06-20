@@ -78,7 +78,7 @@
   </target>
 
 
-  <target name="compile">
+  <target name="compile" depends="check-clover-ok">
     <echo message="${ant.project.name}"/>
     <_javac srcDir="${basedir}/src/main/java"
             destDir="${build.classes}"
@@ -93,10 +93,38 @@
   </target>
 
   <target name="test" depends="jar, compile-test">
-    <echo message="${ant.project.name}"/>
-    <_junit srcDir="${basedir}/src/test/java"/>
+    <delete dir="${test.logs}"/>
+    <!-- <delete dir="${test.warehouse.dir}"/> -->
+  	<antcall target="test-impl" inheritall="true" inheritrefs="true"/>
   </target>
 
+  <target name="test-lightweight">
+    <antcall target="test-impl" inheritall="true" inheritrefs="true"/>
+  </target>
+
+  <!-- Checks correct clover initialization on the current visibility scope. 
+    Fails the build if the check is failed. -->
+  <target name="check-clover-ok" if="clover.jar">
+    <echo message="Project: ${ant.project.name}"/>
+    <antcall target="check-clover-ok-impl" inheritall="true" inheritrefs="true"/>
+    <echo message="    Clover init okay, clover.initstring=${clover.initstring}"/>
+  </target>
+  <target name="check-clover-ok-impl">
+    <condition property="clover.ok">
+      <and>
+        <isset property="clover.initstring"/>
+        <isreference refid="clover.config"/>
+      </and>  
+    </condition>
+    <fail message="Property 'clover.jar' is set, but Clover setup was not correctly invoked 
+ in the current visibility scope." unless="clover.ok"/>
+  </target>
+    
+  <target name="test-impl" >
+    <echo message="Project: ${ant.project.name}"/>
+    <_junit srcDir="${basedir}/src/test/java"/>
+  </target>
+	
   <target name="jar" depends="mvn-dependencies,compile,compile-resource">
     <echo message="${ant.project.name}"/>
     <jar jarfile="${build.dir}/${jar.name}" basedir="${build.classes}">

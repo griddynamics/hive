@@ -40,7 +40,7 @@ to call at top-level: ant deploy-contrib compile-core-test
   <property name="shims.0.20S.hadoop.ivy.dir" value="${hive.root}/build/ivy/lib/hadoop0.20S.shim" />
   <property name="shims.0.23.hadoop.ivy.dir" value="${hive.root}/build/ivy/lib/hadoop0.23.shim" />
 
-  <target name="build-shims"
+  <target name="build-shims" depends="check-clover-ok" 
           description="Build shims against a particular hadoop version">
     <echo message="Project: ${ant.project.name}"/>
     <echo message="Compiling ${sources} against hadoop ${hadoop.version.ant-internal} (${hadoop.root})"/>
@@ -68,7 +68,7 @@ to call at top-level: ant deploy-contrib compile-core-test
     </javac>
   </target>
 	
-  <target name="compile" depends="init,ivy-retrieve">
+  <target name="compile" depends="init,ivy-retrieve,check-clover-ok">
     <echo message="Project: ${ant.project.name}"/>
     <for param="shimName" list="${shims.include}">
       <sequential>
@@ -78,6 +78,9 @@ to call at top-level: ant deploy-contrib compile-core-test
           <param name="sources" value="${shims.@{shimName}.sources}" />
           <param name="hadoop.ivy.dir" value="${shims.@{shimName}.hadoop.ivy.dir}" />
           <param name="shim.name" value="@{shimName}" />
+          <reference refid="clover.config"/>
+          <reference refid="clover-property-set-id"/>
+          <propertyset refid="clover-property-set-id"/>
         </antcall>
       </sequential>
     </for>  	
@@ -85,7 +88,7 @@ to call at top-level: ant deploy-contrib compile-core-test
 
   <target name="compile-test-worker"
           description="worker to compile tests, takes worker.test.src.dir parameter"
-          depends="set-test-classpath">  
+          depends="set-test-classpath,check-clover-ok">  
     <echo message="Project: ${ant.project.name}"/>
     <echo message="Compiling shim tests against hadoop ${hadoop.mr.rev}"/>
     <if>
@@ -135,46 +138,87 @@ to call at top-level: ant deploy-contrib compile-core-test
   <target name="compile-23-test" if="is.23">
     <antcall target="compile-test-worker" inheritRefs="false" inheritAll="false">
       <param name="worker.test.src.dir" value="${basedir}/src/0.23/test" />
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
     </antcall>
   </target>
 
   <target name="compile-20S-test" if="is.20S">
     <antcall target="compile-test-worker" inheritRefs="false" inheritAll="false">
       <param name="worker.test.src.dir" value="${basedir}/src/0.20S/test" />
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
     </antcall>
   </target>
 
   <target name="compile-20-test" if="is.20">
     <antcall target="compile-test-worker" inheritRefs="false" inheritAll="false">
       <param name="worker.test.src.dir" value="${basedir}/src/0.20/test" />
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
     </antcall>
    </target>
 
   <target name="compile-common-secure-test" if="is.secure">
      <antcall target="compile-test-worker" inheritRefs="false" inheritAll="false">
        <param name="worker.test.src.dir" value="${basedir}/src/common-secure/test" />
+       <reference refid="clover.config"/>
+       <reference refid="clover-property-set-id"/>
+       <propertyset refid="clover-property-set-id"/>
      </antcall>
    </target>
 
   <target name="compile-common-test">
     <antcall target="compile-test-worker" inheritRefs="false" inheritAll="false">
       <param name="worker.test.src.dir" value="${basedir}/src/test" />
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
     </antcall>
     <antcall target="compile-test-worker" inheritRefs="false" inheritAll="false">
       <param name="worker.test.src.dir" value="${basedir}/src/common/test" />
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
     </antcall>
     <antcall target="compile-test-worker" inheritRefs="false" inheritAll="false">
       <param name="worker.test.src.dir" value="${test.build.src}" />
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
     </antcall>
   </target>
 
-  <target name="compile-test" depends="compile,ivy-retrieve-test,determine-versions-for-tests">
+  <target name="compile-test" depends="compile,ivy-retrieve-test,determine-versions-for-tests,check-clover-ok">
     <echo message="Project: ${ant.project.name}"/>
-    <antcall target="compile-common-test" />
-    <antcall target="compile-common-secure-test" />
-    <antcall target="compile-20-test" />
-    <antcall target="compile-20S-test" />
-    <antcall target="compile-23-test" />
+    <antcall target="compile-common-test" >
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </antcall>  
+    <antcall target="compile-common-secure-test" >
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </antcall>  
+    <antcall target="compile-20-test" >
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </antcall>  
+    <antcall target="compile-20S-test" >
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </antcall>  
+    <antcall target="compile-23-test" >
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </antcall>
   </target>
 
 </project>
