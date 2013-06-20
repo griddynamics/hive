@@ -67,7 +67,7 @@ public class PluginTest extends TestCase {
     System.setOut(new PrintStream(outBytes, true));
     System.setErr(new PrintStream(errBytes, true));
     try {
-      CliDriver.run(args);
+      new CliDriver().run(args);
     } finally {
       System.setOut(outSaved);
       System.setErr(errSaved);

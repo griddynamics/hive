@@ -109,7 +109,18 @@
   </target>
 
   <!-- Only run tests if thrift.home is defined so that we don't break other tests -->
-  <target name="test" depends="check-word-size,check-thrift-home,set-test-classpath" if="execute.tests">
+  <target name="test" 
+    depends="check-word-size,check-thrift-home,set-test-classpath" if="execute.tests">
+    <antcall target="test-impl" inheritall="true" inheritrefs="true"/>
+  </target>
+  
+  <!-- NB: here "test-lightweight" has the same dependencies as "test". -->
+  <target name="test-lightweight" 
+    depends="check-word-size,check-thrift-home,set-test-classpath" if="execute.tests">
+    <antcall target="test-impl" inheritall="true" inheritrefs="true"/>
+  </target>
+  
+  <target name="test-impl">
     <echo message="Project: ${ant.project.name}"/>
     <exec dir="." executable="${make.cmd}" failonerror="true">
       <arg line="test"/>
@@ -119,4 +130,5 @@
       <env key="BASE_DIR" value="${basedir}"/>
     </exec>
   </target>
+  
 </project>

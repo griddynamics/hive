@@ -45,9 +45,7 @@ to call at top-level: ant deploy-contrib compile-core-test
     </copy>
   </target>
 
-  <!-- target to run the tests -->
-  <target name="test"
-  	depends="test-conditions,gen-test,compile-test,test-jar,test-init">
+	<target name="test-impl" >
     <echo message="Project: ${ant.project.name}"/>
     <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no"
            fork="yes" maxmemory="512m" dir="${basedir}" timeout="${test.junit.timeout}"
@@ -61,9 +59,9 @@ to call at top-level: ant deploy-contrib compile-core-test
                  excludes="**/*$*.class,${test.junit.exclude}" />
       </batchtest>
       <batchtest todir="${test.build.dir}" if="testcase">
-        <fileset dir="${test.build.classes}">
-          <include name="**/${testcase}.class"/>
-          <exclude name="${test.junit.exclude}"/>
+        <fileset dir="${test.build.classes}"
+          includes="**/${testcase}.class,${testcase-list}"
+          excludes="${test.junit.exclude}">
         </fileset>
       </batchtest>
       <assertions>
@@ -72,5 +70,5 @@ to call at top-level: ant deploy-contrib compile-core-test
     </junit>
     <fail if="tests.failed">Tests failed!</fail>
   </target>
-  
+
 </project>
