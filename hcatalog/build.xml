@@ -26,7 +26,8 @@
   <!-- <import file="../build-common.xml"/> -->
 
     <property name="path.to.basedir" location="${basedir}"/>
-
+    <property name="test.result.dir" location="${build.dir.hive}/hcatalog/test"
+              description="location to place TEST-*.xml files so that hive's testreport includes them"/>
     <loadproperties srcfile="${basedir}/build.properties"/>
 
     <!--
@@ -282,6 +283,7 @@
     <!-- Clean up children -->
     <target name="clean-test" description="Cleanup test artifacts">
         <echo message="${ant.project.name}"/>
+        <delete dir="${test.result.dir}"/>
         <delete dir="${build.dir}"/>
         <ant target="clean-test" dir="core" inheritAll="false"/>
         <ant target="clean-test" dir="hcatalog-pig-adapter" inheritAll="false"/>
