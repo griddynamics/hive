@@ -40,7 +40,6 @@ import org.apache.hadoop.mapred.JobConf;
  */
 public abstract class RegexErrorHeuristic implements ErrorHeuristic {
 
-  private String query = null;
   private JobConf conf = null;
 
   // Pattern to look for in the hive query and whether it matched
@@ -86,10 +85,10 @@ public abstract class RegexErrorHeuristic implements ErrorHeuristic {
    * Before init is called, logRegexes and queryRegexes should be populated.
    */
   public void init(String query, JobConf conf) {
-    this.query = query;
+    //this.query = query;
     this.conf = conf;
 
-    assert((logRegexes!=null) && (queryRegex != null));
+    assert(queryRegex != null);
 
     Pattern queryPattern = Pattern.compile(queryRegex, Pattern.CASE_INSENSITIVE);
     queryMatches = queryPattern.matcher(query).find();
