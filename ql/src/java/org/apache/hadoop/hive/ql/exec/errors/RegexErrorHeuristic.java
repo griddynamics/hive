@@ -85,7 +85,6 @@ public abstract class RegexErrorHeuristic implements ErrorHeuristic {
    * Before init is called, logRegexes and queryRegexes should be populated.
    */
   public void init(String query, JobConf conf) {
-    //this.query = query;
     this.conf = conf;
 
     assert(queryRegex != null);
@@ -97,7 +96,6 @@ public abstract class RegexErrorHeuristic implements ErrorHeuristic {
       regexToPattern.put(regex, Pattern.compile(regex, Pattern.CASE_INSENSITIVE));
       regexToLogLines.put(regex, new ArrayList<String>());
     }
-
   }
 
   @Override
