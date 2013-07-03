@@ -18,30 +18,49 @@
 
 package org.apache.hadoop.hive.ql.exec.errors;
 
+import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.mapred.JobConf;
+import org.junit.After;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TestTaskLogProcessor {
   
+  private final List<File> toBeDeletedList = new LinkedList<File>();
+  
+  @After
+  public void after() {
+    for (File f: toBeDeletedList) {
+      f.delete();
+    }
+    toBeDeletedList.clear();
+  }
+  
   private File writeTestLog(String id, String content) throws IOException {
     // Put the script content in a temp file
     File scriptFile = File.createTempFile(getClass().getName() + "-" + id + "-", ".log");
     scriptFile.deleteOnExit();
+    toBeDeletedList.add(scriptFile);
     PrintStream os = new PrintStream(new FileOutputStream(scriptFile));
-    os.print(content);
-    os.close();
+    try {
+      os.print(content);
+    } finally {
+      os.close();
+    }
     return scriptFile;
   }
   
@@ -53,6 +72,29 @@ public class TestTaskLogProcessor {
     return sw.toString();
   }
   
+  /*
+   * returns number of lines in the printed throwable stack trace.
+   */
+  private String writeThrowableAsFile(String before, Throwable t, String after, 
+      String fileSuffix, TaskLogProcessor taskLogProcessor) throws IOException {
+    // compose file text:
+    StringBuilder sb = new StringBuilder();
+    if (before != null) {
+      sb.append(before);
+    }
+    final String stackTraceStr = toString(t);
+    sb.append(stackTraceStr);
+    if (after != null) {
+      sb.append(after);
+    }
+    
+    // write it to file:
+    File file = writeTestLog(fileSuffix, sb.toString());
+    // add it to the log processor:
+    taskLogProcessor.addTaskAttemptLogUrl(file.toURI().toURL().toString());
+    return stackTraceStr;
+  }
+
   @Test
   public void testGetStackTraces() throws Exception {
     JobConf jobConf = new JobConf();
@@ -61,24 +103,48 @@ public class TestTaskLogProcessor {
     final TaskLogProcessor taskLogProcessor = new TaskLogProcessor(jobConf);
 
     Throwable oome = new OutOfMemoryError("java heap space");
-    File log1File = writeTestLog("1", toString(oome));
-    taskLogProcessor.addTaskAttemptLogUrl(log1File.toURI().toURL().toString());
+    String oomeStr = writeThrowableAsFile("Some line in the beginning\n", oome, null, "1", taskLogProcessor);
 
-    Throwable t2 = new InvocationTargetException(new IOException(new NullPointerException()));
-    File log2File = writeTestLog("2", toString(t2));
-    taskLogProcessor.addTaskAttemptLogUrl(log2File.toURI().toURL().toString());
+    Throwable compositeException = new InvocationTargetException(new IOException(new NullPointerException()));
+    String compositeStr = writeThrowableAsFile(null, compositeException, "Some line in the end.\n", "2", taskLogProcessor);
 
-    Throwable t3 = new EOFException();
-    String content = "line a\nlineb\n" + toString(t3) + " line c\nlineD\n";
-    File log3File = writeTestLog("3", content);
-    taskLogProcessor.addTaskAttemptLogUrl(log3File.toURI().toURL().toString());
+    Throwable eofe = new EOFException();
+    String eofeStr = writeThrowableAsFile("line a\nlineb\n", eofe, " line c\nlineD\n", "3", taskLogProcessor);
     
     List<List<String>> stackTraces = taskLogProcessor.getStackTraces();
     assertEquals(3, stackTraces.size());
     
-    assertEquals(26, stackTraces.get(0).size());
-    assertEquals(30, stackTraces.get(1).size());
-    assertEquals(26, stackTraces.get(2).size());
+    // Assert the actual stack traces are exactly equal to the written ones, 
+    // and are contained in "stackTraces" list in the submission order:
+    checkException(oomeStr, stackTraces.get(0));
+    checkException(compositeStr, stackTraces.get(1));
+    checkException(eofeStr, stackTraces.get(2));
+  }
+  
+  private void checkException(String writenText, List<String> actualTrace) throws IOException {
+    List<String> expectedLines = getLines(writenText);
+    String expected, actual; 
+    for (int i=0; i<expectedLines.size(); i++) {
+      expected = expectedLines.get(i);
+      actual = actualTrace.get(i);
+      assertEquals(expected, actual);
+    }
+  }
+  
+  private List<String> getLines(String text) throws IOException{
+    BufferedReader br = new BufferedReader(new StringReader(text));
+    List<String> list = new ArrayList<String>(48);
+    String string;
+    while (true) {
+      string = br.readLine();
+      if (string == null) {
+        break;
+      } else {
+        list.add(string);
+      }
+    }
+    br.close();
+    return list;
   }
   
   @Test
@@ -88,7 +154,8 @@ public class TestTaskLogProcessor {
 
     final TaskLogProcessor taskLogProcessor = new TaskLogProcessor(jobConf);
     
-    String content = "line a\nlineb\n" + "Script failed with code 74" + " line c\nlineD\n";
+    String errorCode = "7874"; // example code
+    String content = "line a\nlineb\n" + "Script failed with code " + errorCode + " line c\nlineD\n";
     File log3File = writeTestLog("1", content);
     taskLogProcessor.addTaskAttemptLogUrl(log3File.toURI().toURL().toString());
     
@@ -100,7 +167,7 @@ public class TestTaskLogProcessor {
     String error = eas.getError();
     assertNotNull(error);
     // check that the error code is present in the error description: 
-    assertTrue(error.indexOf("74") >= 0);
+    assertTrue(error.indexOf(errorCode) >= 0);
     
     String solution = eas.getSolution();
     assertNotNull(solution);
