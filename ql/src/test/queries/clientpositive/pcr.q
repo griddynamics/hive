@@ -102,3 +102,19 @@ select key, value, ds, hr from srcpart where hr='11' and key=11 order by key, ds
 drop table pcr_t1;
 drop table pcr_t2;
 drop table pcr_t3;
+
+drop table pcr_foo;
+create table pcr_foo (key int, value string) partitioned by (ds int);
+insert overwrite table pcr_foo partition (ds=3) select * from src where key < 10 order by key;
+insert overwrite table pcr_foo partition (ds=5) select * from src where key < 10 order by key;
+insert overwrite table pcr_foo partition (ds=7) select * from src where key < 10 order by key;
+
+-- the condition is 'true' for all the 3 partitions (ds=3,5,7):
+select key, value, ds from pcr_foo where (ds % 2 == 1);
+
+-- the condition is 'true' for partitions (ds=3,5) but 'false' of partition ds=7:
+select key, value, ds from pcr_foo where (ds / 3 < 2);
+
+drop table pcr_foo;
+
+
