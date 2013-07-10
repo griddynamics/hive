@@ -131,20 +131,25 @@
   </condition>
   <import file="build-offline.xml"/>
 
-  <condition property="clover.enabled">
-    <isset property="clover.jar"/>
-  </condition>
-
-  <target name="with.clover" if="clover.enabled">
-    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
-    <clover-setup initString="${build.dir.hive}/clover/db/clover.db">
-      <!-- <fileset dir="src" includes="**/*.java"/> -->
-      <!-- NB: IvanVeselovsky, 24 May 2013: this fileset enables instrumentation of tests generated from Velocity macro: -->
-      <!-- <fileset dir="../build" includes="**/*.java"/> -->
-    </clover-setup>
+  <!-- Checks correct clover initialization on the current visibility scope. 
+    Fails the build if the check is failed. -->
+  <target name="check-clover-ok" if="clover.jar">
+    <echo message="Project: ${ant.project.name}"/>
+    <antcall target="check-clover-ok-impl" inheritall="true" inheritrefs="true"/>
+    <echo message="    Clover init okay, clover.initstring=${clover.initstring}"/>
+  </target>
+  <target name="check-clover-ok-impl">
+    <condition property="clover.ok">
+      <and>
+        <isset property="clover.initstring"/>
+        <isreference refid="clover.config"/>
+      </and>  
+    </condition>
+    <fail message="Property 'clover.jar' is set, but Clover setup was not correctly invoked 
+ in the current visibility scope." unless="clover.ok"/>
   </target>
 
-  <target name="gen-clover-report" depends="with.clover">
+  <target name="gen-clover-report" depends="check-clover-ok">
     <mkdir dir="${build.dir.hive}/clover/report/html"/>
     <mkdir dir="${build.dir.hive}/clover/report/html/${ant.project.name}"/>
     <clover-report>
@@ -257,7 +262,7 @@
     </copy>
   </target>
 
-  <target name="init" depends="create-dirs, with.clover">
+  <target name="init" depends="create-dirs">
     <echo message="Project: ${ant.project.name}"/>
   </target>
 
@@ -277,7 +282,7 @@
     <echo message="Project: ${ant.project.name}"/>
   </target>
 
-  <target name="compile" depends="init, setup, ivy-retrieve">
+  <target name="compile" depends="init, setup, ivy-retrieve, check-clover-ok">
     <echo message="Project: ${ant.project.name}"/>
     <javac
      encoding="${build.encoding}"
@@ -315,7 +320,7 @@
   </target>
 
   <!-- target to compile tests -->
-  <target name="compile-test" depends="compile,ivy-retrieve-test,set-test-classpath">
+  <target name="compile-test" depends="compile,ivy-retrieve-test,set-test-classpath,check-clover-ok">
     <echo message="Project: ${ant.project.name}"/>
     <javac
      encoding="${build.encoding}"
@@ -428,10 +433,28 @@
   <property name="mapred.job.tracker" value="local"/>
   <property name="fs.default.name" value="file:///"/>
 
-  <!-- target to run the tests -->
+  <!-- target to run the tests with test rebuilding. -->
   <target name="test"
     depends="test-conditions,gen-test,compile-test,test-jar,test-init">
     <echo message="Project: ${ant.project.name}"/>
+  	<antcall target="test-impl" inheritall="true" inheritrefs="true">
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </antcall>
+  </target>
+  
+  <!-- target to run the tests without test rebuilding. It has reduced set of dependencies. -->
+  <target name="test-lightweight" depends="test-init,test-conditions">
+    <echo message="Project: ${ant.project.name}"/>
+    <antcall target="test-impl" inheritall="true" inheritrefs="true">
+    </antcall>
+  </target>
+	
+	<!-- delegate target to be invoked w/o "test" target dependencies: -->
+	<target name="test-impl" >
+    <echo message="Project: ${ant.project.name}"/>
+		
     <property name="hadoop.testcp" refid="test.classpath"/>
     <if>
       <equals arg1="${hadoop.mr.rev}" arg2="23" />
@@ -509,15 +532,16 @@
                  excludes="**/TestSerDe.class,**/TestHiveMetaStore.class,**/TestBeeLineDriver*.class,**/TestHiveServer2Concurrency.class,**/*$*.class,${test.junit.exclude}" />
       </batchtest>
       <batchtest todir="${test.build.dir}" if="testcase">
-        <fileset dir="${test.build.classes}">
-          <include name="**/${testcase}.class"/>
-          <exclude name="${test.junit.exclude}"/>
+        <fileset dir="${test.build.classes}"
+          includes="**/${testcase}.class,${testcase-list}"
+          excludes="${test.junit.exclude}">
         </fileset>
       </batchtest>
       <assertions>
         <enable />
       </assertions>
     </junit>
+		
     <fail message="Tests failed!">
       <condition>
         <and>

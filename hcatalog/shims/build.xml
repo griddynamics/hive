@@ -26,7 +26,7 @@
     <fileset dir="${path.to.basedir}/core/build/lib/compile"/>
   </path>
 
-  <target name="jar">
+  <target name="jar" depends="check-clover-ok">
     <echo message="${ant.project.name}"/>
     <_javac srcDir="${basedir}/src/${hadoopversion}/java"
             destDir="${path.to.basedir}/core/build/classes"

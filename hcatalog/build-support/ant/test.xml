@@ -28,9 +28,10 @@
       <!-- If anyone knows how to set umask inside ant please do so -->
       <exec executable="${path.to.basedir}/build-support/scripts/umaskcheck.sh"
             failonerror="true"/>
-
-      <delete dir="${test.logs}"/>
+      
+      <!-- <delete dir="${test.logs}"/> -->
       <delete dir="${test.warehouse.dir}"/>
+      
       <mkdir dir="${test.logs}"/>
       <mkdir dir="${test.warehouse.dir}"/>
 
@@ -56,7 +57,7 @@
           <fileset dir="@{srcDir}" includes="**/Test*.java"/>
         </batchtest>
         <batchtest fork="yes" todir="${test.logs}" if="testcase">
-          <fileset dir="@{srcDir}" includes="**/${testcase}.java"/>
+          <fileset dir="@{srcDir}" includes="**/${testcase}.java,${testcase-list}"/>
         </batchtest>
         <assertions>
           <enable/>

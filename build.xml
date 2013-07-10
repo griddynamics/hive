@@ -25,7 +25,7 @@
          xmlns:maven="antlib:org.apache.maven.artifact.ant">
 
   <property name="hive.root" location="${basedir}"/>
-  <property file="${hive.root}/build.properties"/>
+  <property file="${hive.root}/build.properties" />
   <property file="${user.home}/build.properties" />
   <property file="${basedir}/build.properties" />
   <loadproperties srcfile="${ivy.conf.dir}/libraries.properties"/>
@@ -113,7 +113,8 @@
   <macrodef name="iterate">
     <attribute name="target"/>
     <attribute name="iterate"/>
-    <attribute name="failonerror" default="false"/>
+    <!-- NB: "failonerror" set to fast-fail on compilation errors: -->
+    <attribute name="failonerror" default="true"/>
     <sequential>
       <if>
         <isset property="module"/>
@@ -126,6 +127,10 @@
             <property name="is-offline" value="${is-offline}"/>
             <property name="thrift.home" value="${thrift.home}"/>
             <property name="build.dir.hive" location="${build.dir.hive}"/>
+            <!-- Pass down the Clover properties: -->
+            <reference refid="clover.config"/>
+            <reference refid="clover-property-set-id"/>
+            <propertyset refid="clover-property-set-id"/>
           </subant>
         </sequential>
       </for>
@@ -143,7 +148,7 @@
     <fileset dir="${hive.root}" includes="hive-*.jar"/>
     <fileset dir="${hive.root}/lib" includes="*.jar"/>
     <fileset dir="${build.dir.hive}/ivy/lib/default" includes="*.jar"
-	excludes="*hadoop*.jar" erroronmissingdir="false"/>
+  excludes="*hadoop*.jar" erroronmissingdir="false"/>
   </path>
 
   <path id="classpath">
@@ -217,7 +222,7 @@
     <ivy:cleancache />
   </target>
 
-  <target name="init" depends="ivy-init-antlib,deploy-ant-tasks">
+  <target name="init" depends="ivy-init-antlib,deploy-ant-tasks,clover-init">
     <echo message="Project: ${ant.project.name}"/>
     <iterate target="init" iterate="${iterate.hive.all}"/>
   </target>
@@ -227,10 +232,42 @@
     <iterate target="test-init" iterate="${iterate.hive.all}"/>
   </target>
 
+  <!-- empty propertyset needed in case if clover.jar is not defined: -->
+  <propertyset id="clover-property-set-id"/>
+  
+  <!-- Initializes Clover subsystem. -->
+  <target name="clover-init" if="clover.jar">
+    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    <!-- NB: flushpolicy="threaded" is set to make the clover flushing more reliable.
+      With the default policy ("directed") we typically have some errors upon reading the 
+      coverage records. -->
+    <clover-setup
+      initString="${build.dir.hive}/clover/db/clover.db"
+      flushpolicy="threaded" flushinterval="5000">
+      <files>
+        <!-- Exclude custom Ant tasks from the instrumentation: -->
+        <exclude name="org/apache/hadoop/hive/ant/**/*"/>
+        <!-- Exclude NoExitSecurityManager to overcome ClassCircularityError happening in tests runtime.
+        (Tests: org.apache.hcatalog.mapreduce.TestHCatPartitionPublish, org.apache.hcatalog.api.TestHCatClient) 
+        -->
+        <exclude name="org/apache/hcatalog/NoExitSecurityManager.java"/>
+        <!-- This is a special junit test runner used in TestBeeLineDriver.vm template.
+        it should not be instrumented since this is just a test runner. -->
+        <exclude name="org/apache/hive/testutils/junit/runners/**/*"/>
+      </files>
+    </clover-setup>
+    
+    <propertyset id="clover-property-set-id">
+      <propertyref name="build.compiler"/>
+      <propertyref name="clover.initstring"/>
+      <propertyref name="clover.jarpath"/>
+    </propertyset>
+  </target>
+  
   <!-- target to deploy anttasks -->
   <target name="compile-ant-tasks">
     <echo message="Project: ${ant.project.name}"/>
-    <subant target="compile">
+    <subant target="compile" failonerror="true">
       <fileset dir="." includes="ant/build.xml"/>
     </subant>
   </target>
@@ -239,6 +276,9 @@
     <echo message="Project: ${ant.project.name}"/>
     <subant target="jar">
       <fileset dir="." includes="ant/build.xml"/>
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
     </subant>
     <taskdef name="getversionpref" classname="org.apache.hadoop.hive.ant.GetVersionPref"
              classpath="${build.dir.hive}/anttasks/hive-anttasks-${version}.jar"/>
@@ -285,35 +325,73 @@
   </target>
 
   <target name="gen-test" depends="jar" description="Generate tests">
-    <iterate target="gen-test" iterate="${iterate.hive.tests}"/>
+    <iterate target="gen-test" iterate="${iterate.hive.compile-tests}"/>
   </target>
   
   <target name="jar-test" depends="gen-test"
           description="Build Java test artifacts">
     <echo message="Project: ${ant.project.name}"/>
-    <iterate target="compile-test" iterate="${iterate.hive.tests}"/>
+    <!-- NB: changed to be able to separate tests packaging 
+       from tests running. Was: target="compile-test". -->
+    <iterate target="test-jar" iterate="${iterate.hive.compile-tests}"/>
   </target>
+
+  <!-- Runs all the tests with test rebuilding: -->
+  <target name="test" depends="clean-test,jar-test" 
+    description="Run all the tests with test code regeneration/rebuilding.">
+    <antcall target="test-impl" inheritall="true" inheritrefs="true">
+      <!-- "test" value of "test-target" to run the tests with rebuilding: -->
+      <param name="test-target" value="test"/>
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </antcall>
+  </target>
+
+  <target name="test-lightweight"  
+    description="Runs tests without any regeneration/rebuilding. 
+ This target can be invoked directly. Useful in distributed builds to run batches of tests.">
+    <antcall target="test-impl" inheritall="true" inheritrefs="true">
+      <!-- "test-lightweight" value of "test-target" to run the tests without rebuilding: -->
+      <param name="test-target" value="test-lightweight"/>
+    </antcall>
+  </target>  
   
-  <target name="test" depends="clean-test,jar-test" description="Run tests">
+  <target name="test-impl" description="Runs tests without any regeneration/rebuilding. 
+    This target can be invoked directly. Useful in distributed builds to run batches of tests.">
     <echo message="Project: ${ant.project.name}"/>
+    <echo message="   test-target: ${test-target}"/>
     <if>
       <isset property="module"/>
       <else>
         <antcall target="test-shims">
           <param name="hadoop.version.ant-internal" value="${hadoop.security.version}" />
+          <reference refid="clover.config"/>
+          <reference refid="clover-property-set-id"/>
+          <propertyset refid="clover-property-set-id"/>
         </antcall>
       </else>
     </if>
-    <condition property="target.module" value="${module}" else="${iterate.hive.test}">
+
+    <condition property="test-iteration-list" value="${module}" else="${iterate.hive.tests}">
       <isset property="module"/>
     </condition>
-    <for keepgoing="${test.continue.on.failure}" list="${target.module}" param="module">
+
+    <for keepgoing="${test.continue.on.failure}" list="${test-iteration-list}" param="module">
       <sequential>
         <trycatch property="failure.message">
           <try>
-            <ant antfile="@{module}/build.xml" target="test" inheritAll="false" inheritRefs="true">
+            <ant antfile="@{module}/build.xml" target="${test-target}" inheritAll="false" inheritRefs="true">
               <property name="build.dir.hive" location="${build.dir.hive}"/>
               <property name="is-offline" value="${is-offline}"/>
+              <property name="test-target" value="${test-target}"/>
+              <!-- NB: Clover properties are not needed in test runtime. 
+               However, passing down Clover properties is needed there in case if
+               "test-target" == "test", in which case "test" target in submodules may
+               recompile the project and/or tests. -->
+              <reference refid="clover.config"/>
+              <reference refid="clover-property-set-id"/>
+              <propertyset refid="clover-property-set-id"/>
             </ant>
           </try>
           <catch>
@@ -328,11 +406,15 @@
     </for>
   </target>
 
+  <!-- Special test implementation for "shims" subproject: -->
   <target name="test-shims">
     <echo message="Project: ${ant.project.name}"/>
-    <subant target="test" failonerror="${test.halt.on.failure}">
+    <subant target="${test-target}" failonerror="${test.halt.on.failure}">
       <property name="hadoop.version" value="${hadoop.security.version}"/>
       <property name="hadoop.security.version" value="${hadoop.security.version}"/>
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
       <fileset dir="${hive.root}/shims" includes="build.xml"/>
     </subant>
   </target>
@@ -341,37 +423,9 @@
     <iterate target="gen-clover-report" iterate="${iterate.hive.all}" failonerror="false"/>
   </target>
 
-  <fileset dir="${basedir}" id="clover.report.fileset">
-    <include name="**/*.java"/>
-    <exclude name="**/hive/metastore/api/**/*.java"/>
-    <exclude name="**/hive/ql/plan/api/**/*.java"/>
-    <exclude name="**/hive/serde2.dynamic_type/**/*.java"/>
-    <exclude name="**/hive/serde2/dynamic_type/*.java"/>
-    <exclude name="**/hive/service/*.java"/>
-    <exclude name="**/hive/serde2/thrift/test/*.java"/>
-    <exclude name="**/hive/serde/test/*.java"/>
-    <exclude name="**/hive/**/example/**/*.java"/>
-    <exclude name="**/hive/serde2/thrift_test/*.java"/>
-    <exclude name="**/hive/contrib/serde2/*.java"/>
-    <exclude name="**/hive/contrib/serde2/s3/*.java"/>
-    <exclude name="**/hive/contrib/util/typedbytes/*.java"/>
-    <exclude name="**/hive/hwi/*.java"/>
-    <exclude name="**/hive/jdbc/*.java"/>
-    <exclude name="**/hive/scripts/*.java"/>
-    <exclude name="**/hive/pdk/*.java"/>
-  </fileset>
-
-  <target name="clover-aggregate">
+  <target name="clover-aggregate" description="Merges Clover databases and generates Clover xml and html reports.">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
     <typedef resource="cloverlib.xml" classpath="${clover.jar}"/>
-
-    <clover-columns id="clover.columns">
-        <totalChildren/>
-        <filteredElements/>
-        <avgMethodComplexity/>
-        <uncoveredElements format="raw"/>
-        <totalPercentageCovered format="longbar"/>
-    </clover-columns>
 
     <clover-merge initString="hive-clover.db">
       <cloverDbSet dir="${build.dir.hive}">
@@ -380,21 +434,63 @@
         <include name="**/clover-original.db"/>
       </cloverDbSet>
     </clover-merge>
-    <mkdir dir="${build.dir.hive}/clover/report/html"/>
-    <clover-report initstring="hive-clover.db">
-      <current outfile="${build.dir.hive}/clover/report/html" title="Hive">
+
+    <antcall target="clover-report" inheritall="true" inheritrefs="true">
+    </antcall>
+  </target>
+
+  <target name="clover-report">
+    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    <typedef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    
+    <property name="initstring"   value="hive-clover.db"/>
+    <property name="html-outfile" value="${build.dir.hive}/clover/report/html"/>
+    <property name="xml-outfile"  value="${build.dir.hive}/clover/report/report.xml"/>
+    
+    <fileset dir="${basedir}" id="clover.report.fileset">
+      <include name="**/*.java"/>
+  <!-- 
+      <exclude name="**/hive/metastore/api/**/*.java"/>
+      <exclude name="**/hive/ql/plan/api/**/*.java"/>
+      <exclude name="**/hive/serde2.dynamic_type/**/*.java"/>
+      <exclude name="**/hive/serde2/dynamic_type/*.java"/>
+      <exclude name="**/hive/service/*.java"/>
+      <exclude name="**/hive/serde2/thrift/test/*.java"/>
+      <exclude name="**/hive/serde/test/*.java"/>
+      <exclude name="**/hive/**/example/**/*.java"/>
+      <exclude name="**/hive/serde2/thrift_test/*.java"/>
+      <exclude name="**/hive/contrib/serde2/*.java"/>
+      <exclude name="**/hive/contrib/serde2/s3/*.java"/>
+      <exclude name="**/hive/contrib/util/typedbytes/*.java"/>
+      <exclude name="**/hive/hwi/*.java"/>
+      <exclude name="**/hive/jdbc/*.java"/>
+      <exclude name="**/hive/scripts/*.java"/>
+      <exclude name="**/hive/pdk/*.java"/> -->
+    </fileset>
+
+    <clover-columns id="clover.columns">
+        <totalChildren/>
+        <filteredElements/>
+        <avgMethodComplexity/>
+        <uncoveredElements format="raw"/>
+        <totalPercentageCovered format="longbar"/>
+    </clover-columns>
+    
+    <mkdir dir="${html-outfile}/"/>
+    <clover-report initstring="${initstring}">
+      <current outfile="${html-outfile}" title="Hive">
         <fileset refid="clover.report.fileset"/>
         <format type="html"/>
         <columns refid="clover.columns"/>
       </current>
-      <current outfile="${build.dir.hive}/clover/report/report.xml" title="Hive">
+      <current outfile="${xml-outfile}" title="Hive">
         <fileset refid="clover.report.fileset"/>
         <format type="xml"/>
         <columns refid="clover.columns"/>
       </current>
     </clover-report>
   </target>
-
+ 
   <!-- create an html report from junit output files -->
   <target name="testreport"
           description="Generate JUnit HTML test report">
@@ -559,7 +655,7 @@
         <include name="*.jar"/>
         <exclude name="*.tar.gz"/>
         <exclude name="hadoop-*.jar" />
-	<exclude name="**/*high-scale-lib-*"/>
+  <exclude name="**/*high-scale-lib-*"/>
         <exclude name="**/hamcrest-core-*jar"/>
         <exclude name="**/junit*.jar"/>
         <exclude name="**/asm*.jar"/>
@@ -588,7 +684,11 @@
 
     <!-- Package the hcat stuff and pull it up into Hive's build dir -->
     <ant antfile="${hive.root}/hcatalog/build.xml" target="package"
-        inheritAll="false"/>
+        inheritAll="false">
+      <reference refid="clover.config"/>
+      <reference refid="clover-property-set-id"/>
+      <propertyset refid="clover-property-set-id"/>
+    </ant>  
     <mkdir dir="${target.dir}/hcatalog"/>
     <copy todir="${target.dir}/hcatalog">
         <fileset dir="${hive.root}/hcatalog/build/hcatalog-${hcatalog.version}"/>
@@ -688,7 +788,7 @@
       dest="${build.dir.hive}/arc-jira.tar.gz"
       src="https://github.com/facebook/arc-jira/tarball/master"/>
     <untar src="${build.dir.hive}/arc-jira.tar.gz" compression="gzip"
- 		dest="${build.dir.hive}">
+     dest="${build.dir.hive}">
       <patternset>
         <include name="facebook-arc-jira-*/arc_jira_lib/**"/>
       </patternset>
@@ -895,14 +995,14 @@
            <exclude name="data/files/*.rc"/>
            <exclude name="**/test/data/**/*.rc"/>
            <exclude name="data/files/*.seq"/>
-	   <exclude name="**/data/files/*.log"/>
+     <exclude name="**/data/files/*.log"/>
            <exclude name="**/*.txt"/>
            <exclude name="**/test/results/**/*.out"/>
            <exclude name="**/test/results/**/*.xml"/>
            <exclude name="**/testdata/*.input"/>
 
            <!-- Ignore recordio generated file -->
-	   <exclude name="ql/src/test/org/apache/hadoop/hive/ql/io/RecordTestObj.java"/>
+     <exclude name="ql/src/test/org/apache/hadoop/hive/ql/io/RecordTestObj.java"/>
 
            <!-- Ignore thrift generated files -->
            <exclude name="service/lib/php/packages/fb303/FacebookService.php"/>
@@ -921,7 +1021,7 @@
   <target name="check-for-rat">
     <echo message="Project: ${ant.project.name}"/>
     <available property="rat.present" 
-	       resource="org/apache/rat/anttasks/antlib.xml">
+         resource="org/apache/rat/anttasks/antlib.xml">
       <classpath refid="rat-classpath"/>
     </available>
   </target>
@@ -957,7 +1057,7 @@
     <mkdir dir="${checkstyle.build.dir}"/>
 
     <checkstyle config="${checkstyle.conf.dir}/checkstyle.xml"
-  		failOnViolation="false">
+      failOnViolation="false">
       <fileset dir="${hive.root}">
         <exclude name="build/**"/>
         <exclude name="ant/**"/>
@@ -1001,7 +1101,7 @@
     <echo message="Project: ${ant.project.name}" />
     <path id="findbugs.classpath">
       <fileset dir="${build.ivy.lib.dir}/findbugs">
-	<include name="*.jar" />
+  <include name="*.jar" />
       </fileset>
     </path>
     <pathconvert property="findbugs.classpath" refid="findbugs.classpath" />
@@ -1022,9 +1122,9 @@
     <findbugs classpath="${findbugs.classpath}" pluginList="" effort="max" output="xml" outputFile="${findbugs.report.xmlfile}" excludeFilter="${findbugs.exclude.file}">
       
       <auxClasspath>
-	<fileset dir="${build.dir.hive}">
-	  <include name="**/*.jar" />
-	</fileset>
+  <fileset dir="${build.dir.hive}">
+    <include name="**/*.jar" />
+  </fileset>
       </auxClasspath>
       
       <sourcePath path="${hive.root}/ant" />
@@ -1118,7 +1218,7 @@
   <target name="mvn-taskdef" depends="ivy-retrieve-maven-ant-tasks">
     <echo message="Project: ${ant.project.name}"/>
     <typedef resource="org/apache/maven/artifact/ant/antlib.xml"
-	     uri="urn:maven-artifact-ant" classpathref="maven-ant-tasks.classpath" />
+       uri="urn:maven-artifact-ant" classpathref="maven-ant-tasks.classpath" />
   </target>
   
   <target name="maven-build" depends="package" description="Build Maven artifacts">
