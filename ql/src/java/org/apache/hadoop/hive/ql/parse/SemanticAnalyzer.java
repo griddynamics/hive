@@ -7338,8 +7338,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       if (limit != null) {
         boolean extraMRStep = true;
 
-        if (qb.getIsQuery() && qbp.getClusterByForClause(dest) == null
-            && qbp.getSortByForClause(dest) == null) {
+        if (qbp.getOrderByForClause(dest) != null ||
+            qb.getIsQuery() && qbp.getClusterByForClause(dest) == null &&
+            qbp.getSortByForClause(dest) == null) {
           extraMRStep = false;
         }
 
@@ -7718,10 +7719,10 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       TableScanDesc tsDesc = new TableScanDesc(alias, vcList);
       setupStats(tsDesc, qb.getParseInfo(), tab, alias, rwsch);
 
-      SplitSample sample = nameToSplitSample.get(alias);
+      SplitSample sample = nameToSplitSample.get(alias_id);
       if (sample != null && sample.getRowCount() != null) {
         tsDesc.setRowLimit(sample.getRowCount());
-        nameToSplitSample.remove(alias);
+        nameToSplitSample.remove(alias_id);
       }
 
       top = putOpInsertMap(OperatorFactory.get(tsDesc,
