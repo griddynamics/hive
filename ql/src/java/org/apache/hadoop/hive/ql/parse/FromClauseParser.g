@@ -125,11 +125,11 @@ lateralView
 @init {gParent.msgs.push("lateral view"); }
 @after {gParent.msgs.pop(); }
 	:
-	KW_LATERAL KW_VIEW KW_OUTER function tableAlias KW_AS identifier (COMMA identifier)*
-	-> ^(TOK_LATERAL_VIEW_OUTER ^(TOK_SELECT ^(TOK_SELEXPR function identifier+ tableAlias)))
+	KW_LATERAL KW_VIEW KW_OUTER function tableAlias (KW_AS identifier (COMMA identifier)*)?
+	-> ^(TOK_LATERAL_VIEW_OUTER ^(TOK_SELECT ^(TOK_SELEXPR function identifier* tableAlias)))
 	|
-	KW_LATERAL KW_VIEW function tableAlias KW_AS identifier (COMMA identifier)*
-	-> ^(TOK_LATERAL_VIEW ^(TOK_SELECT ^(TOK_SELEXPR function identifier+ tableAlias)))
+	KW_LATERAL KW_VIEW function tableAlias (KW_AS identifier (COMMA identifier)*)?
+	-> ^(TOK_LATERAL_VIEW ^(TOK_SELECT ^(TOK_SELEXPR function identifier* tableAlias)))
 	;
 
 tableAlias
@@ -176,8 +176,8 @@ tableSample
 tableSource
 @init { gParent.msgs.push("table source"); }
 @after { gParent.msgs.pop(); }
-    : tabname=tableName (ts=tableSample)? (KW_AS? alias=identifier)?
-    -> ^(TOK_TABREF $tabname $ts? $alias?)
+    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
+    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
     ;
 
 tableName

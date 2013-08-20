@@ -106,6 +106,7 @@ public class GenericUDAFCovariance extends AbstractGenericUDAFResolver {
         return new GenericUDAFCovarianceEvaluator();
       case STRING:
       case BOOLEAN:
+      case DATE:
       default:
         throw new UDFArgumentTypeException(1,
             "Only numeric or string type arguments are accepted but "
@@ -113,6 +114,7 @@ public class GenericUDAFCovariance extends AbstractGenericUDAFResolver {
       }
     case STRING:
     case BOOLEAN:
+    case DATE:
     default:
       throw new UDFArgumentTypeException(0,
           "Only numeric or string type arguments are accepted but "
@@ -148,11 +150,11 @@ public class GenericUDAFCovariance extends AbstractGenericUDAFResolver {
     private PrimitiveObjectInspector yInputOI;
 
     // For PARTIAL2 and FINAL
-    private StructObjectInspector soi;
-    private StructField countField;
-    private StructField xavgField;
-    private StructField yavgField;
-    private StructField covarField;
+    private transient StructObjectInspector soi;
+    private transient StructField countField;
+    private transient StructField xavgField;
+    private transient StructField yavgField;
+    private transient StructField covarField;
     private LongObjectInspector countFieldOI;
     private DoubleObjectInspector xavgFieldOI;
     private DoubleObjectInspector yavgFieldOI;
@@ -250,7 +252,7 @@ public class GenericUDAFCovariance extends AbstractGenericUDAFResolver {
       myagg.covar = 0;
     }
 
-    private boolean warned = false;
+    private final boolean warned = false;
 
     @Override
     public void iterate(AggregationBuffer agg, Object[] parameters) throws HiveException {

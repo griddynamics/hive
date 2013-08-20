@@ -141,7 +141,7 @@
 
 <property>
   <name>javax.jdo.PersistenceManagerFactoryClass</name>
-  <value>org.datanucleus.jdo.JDOPersistenceManagerFactory</value>
+  <value>org.datanucleus.api.jdo.JDOPersistenceManagerFactory</value>
   <description>class implementing the jdo persistence</description>
 </property>
 
@@ -237,8 +237,8 @@
 
 <property>
   <name>datanucleus.identifierFactory</name>
-  <value>datanucleus</value>
-  <description>Name of the identifier factory to use when generating table/column names etc. 'datanucleus' is used for backward compatibility</description>
+  <value>datanucleus1</value>
+  <description>Name of the identifier factory to use when generating table/column names etc. 'datanucleus1' is used for backward compatibility with DataNucleus v1</description>
 </property>
 
 <property>
@@ -293,7 +293,7 @@
   <name>hive.metastore.disallow.incompatible.col.type.change</name>
   <value></value>
   <description>If true (default is false), ALTER TABLE operations which change the type of 
-    a column (say STRING) to an incompatible type (say MAP<STRING, STRING>) are disallowed.  
+    a column (say STRING) to an incompatible type (say MAP&lt;STRING, STRING&gt;) are disallowed.  
     RCFile default serde (ColumnarSerde) serializes the values in such a way that the
     datatypes can be converted from string to any type. The map is also serialized as
     a string, which can be read as a string as well. However, with any binary 
@@ -444,6 +444,12 @@
   <name>hive.map.aggr.hash.percentmemory</name>
   <value>0.5</value>
   <description>Portion of total memory to be used by map-side grup aggregation hash table</description>
+</property>
+
+<property>
+  <name>hive.session.history.enabled</name>
+  <value>false</value>
+  <description>Whether to log hive query, query plan, runtime statistics etc </description>
 </property>
 
 <property>
@@ -860,16 +866,6 @@
 </property>
 
 <property>
-  <name>hive.optimize.mapjoin.mapreduce</name>
-  <value>false</value>
-  <description>If hive.auto.convert.join is off, this parameter does not take
-    affect. If it is on, and if there are map-join jobs followed by a map-reduce
-    job (for e.g a group by), each map-only job is merged with the following
-    map-reduce job.
-  </description>
-</property>
-
-<property>
   <name>hive.script.auto.progress</name>
   <value>false</value>
   <description>Whether Hive Tranform/Map/Reduce Clause should automatically send progress information to TaskTracker to avoid the task getting killed because of inactivity.  Hive sends progress information when the script is outputting to stderr.  This option removes the need of periodically producing stderr messages, but users should be cautious because this may prevent infinite loops in the scripts to be killed by TaskTracker.  </description>
@@ -893,6 +889,18 @@
   <name>hive.script.recordreader</name>
   <value>org.apache.hadoop.hive.ql.exec.TextRecordReader</value>
   <description>The default record reader for reading data from the user scripts. </description>
+</property>
+
+<property>
+  <name>stream.stderr.reporter.prefix</name>
+  <value>reporter:</value>
+  <description>Streaming jobs that log to stardard error with this prefix can log counter or status information.</description>
+</property>
+
+<property>
+  <name>stream.stderr.reporter.enabled</name>
+  <value>true</value>
+  <description>Enable consumption of status and counter messages for streaming jobs.</description>
 </property>
 
 <property>
@@ -1118,6 +1126,12 @@
   <name>hive.optimize.reducededuplication</name>
   <value>true</value>
   <description>Remove extra map-reduce jobs if the data is already clustered by the same key which needs to be used again. This should always be set to true. Since it is a new feature, it has been made configurable.</description>
+</property>
+
+<property>
+  <name>hive.optimize.correlation</name>
+  <value>false</value>
+  <description>exploit intra-query correlations.</description>
 </property>
 
 <property>
@@ -1693,6 +1707,15 @@
 </property>
 
 <property>
+  <name>hive.exec.orc.dictionary.key.size.threshold</name>
+  <value>0.8</value>
+  <description>
+    If the number of keys in a dictionary is greater than this fraction of the total number of
+    non-null rows, turn off dictionary encoding.  Use 1 to always use dictionary encoding.
+  </description>
+</property>
+
+<property>
   <name>hive.multi.insert.move.tasks.share.dependencies</name>
   <value>false</value>
   <description>
@@ -1911,6 +1934,22 @@
   </description>
 </property>
 
+<property>
+  <name>hive.server2.table.type.mapping</name>
+  <value>HIVE</value>
+  <description>
+   This setting reflects how HiveServer will report the table types for JDBC and other
+   client implementations that retrieves the available tables and supported table types
+     HIVE : Exposes the hive's native table tyes like MANAGED_TABLE, EXTERNAL_TABLE, VIRTUAL_VIEW
+     CLASSIC : More generic types like TABLE and VIEW
+  </description>
+</property>
+
+<property>
+  <name>hive.server2.thrift.sasl.qop</name>
+  <value>auth</auth>
+  <description>Sasl QOP value; one of 'auth', 'auth-int' and 'auth-conf'</description>
+</property>
 
 </configuration>
 

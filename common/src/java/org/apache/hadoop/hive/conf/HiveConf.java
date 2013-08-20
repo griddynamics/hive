@@ -182,6 +182,8 @@ public class HiveConf extends Configuration {
     SUBMITVIACHILD("hive.exec.submitviachild", false),
     SCRIPTERRORLIMIT("hive.exec.script.maxerrsize", 100000),
     ALLOWPARTIALCONSUMP("hive.exec.script.allow.partial.consumption", false),
+    STREAMREPORTERPERFIX("stream.stderr.reporter.prefix", "reporter:"),
+    STREAMREPORTERENABLED("stream.stderr.reporter.enabled", true),
     COMPRESSRESULT("hive.exec.compress.output", false),
     COMPRESSINTERMEDIATE("hive.exec.compress.intermediate", false),
     COMPRESSINTERMEDIATECODEC("hive.intermediate.compression.codec", ""),
@@ -324,7 +326,8 @@ public class HiveConf extends Configuration {
     METASTORE_TRANSACTION_ISOLATION("datanucleus.transactionIsolation", "read-committed"),
     METASTORE_CACHE_LEVEL2("datanucleus.cache.level2", false),
     METASTORE_CACHE_LEVEL2_TYPE("datanucleus.cache.level2.type", "none"),
-    METASTORE_IDENTIFIER_FACTORY("datanucleus.identifierFactory", "datanucleus"),
+    METASTORE_IDENTIFIER_FACTORY("datanucleus.identifierFactory", "datanucleus1"),
+    METASTORE_USE_LEGACY_VALUE_STRATEGY("datanucleus.rdbms.useLegacyNativeValueStrategy", true),
     METASTORE_PLUGIN_REGISTRY_BUNDLE_CHECK("datanucleus.plugin.pluginRegistryBundleCheck", "LOG"),
     METASTORE_BATCH_RETRIEVE_MAX("hive.metastore.batch.retrieve.max", 300),
     METASTORE_BATCH_RETRIEVE_TABLE_PARTITION_MAX(
@@ -341,6 +344,7 @@ public class HiveConf extends Configuration {
     METASTORE_EXECUTE_SET_UGI("hive.metastore.execute.setugi", false),
     METASTORE_PARTITION_NAME_WHITELIST_PATTERN(
         "hive.metastore.partition.name.whitelist.pattern", ""),
+    METASTORE_TRY_DIRECT_SQL("hive.metastore.try.direct.sql", true),
     METASTORE_DISALLOW_INCOMPATIBLE_COL_TYPE_CHANGES(
         "hive.metastore.disallow.incompatible.col.type.changes", false),
 
@@ -353,7 +357,7 @@ public class HiveConf extends Configuration {
     METASTORE_CONNECTION_DRIVER("javax.jdo.option.ConnectionDriverName",
         "org.apache.derby.jdbc.EmbeddedDriver"),
     METASTORE_MANAGER_FACTORY_CLASS("javax.jdo.PersistenceManagerFactoryClass",
-        "org.datanucleus.jdo.JDOPersistenceManagerFactory"),
+        "org.datanucleus.api.jdo.JDOPersistenceManagerFactory"),
     METASTORE_DETACH_ALL_ON_COMMIT("javax.jdo.option.DetachAllOnCommit", true),
     METASTORE_NON_TRANSACTIONAL_READ("javax.jdo.option.NonTransactionalRead", true),
     METASTORE_CONNECTION_USER_NAME("javax.jdo.option.ConnectionUserName", "APP"),
@@ -379,6 +383,9 @@ public class HiveConf extends Configuration {
     HIVESESSIONID("hive.session.id", ""),
     // whether session is running in silent mode or not
     HIVESESSIONSILENT("hive.session.silent", false),
+
+    // Whether to enable history for this session
+    HIVE_SESSION_HISTORY_ENABLED("hive.session.history.enabled", false),
 
     // query being executed (multiple per session)
     HIVEQUERYSTRING("hive.query.string", ""),
@@ -498,13 +505,17 @@ public class HiveConf extends Configuration {
 
     // Maximum fraction of heap that can be used by ORC file writers
     HIVE_ORC_FILE_MEMORY_POOL("hive.exec.orc.memory.pool", 0.5f), // 50%
+    // use 0.11 version of RLE encoding. if this conf is not defined or any
+    // other value specified, ORC will use the new RLE encoding
+    HIVE_ORC_WRITE_FORMAT("hive.exec.orc.write.format", "0.11"),
+
+    HIVE_ORC_DICTIONARY_KEY_SIZE_THRESHOLD("hive.exec.orc.dictionary.key.size.threshold", 0.8f),
 
     HIVESKEWJOIN("hive.optimize.skewjoin", false),
     HIVECONVERTJOIN("hive.auto.convert.join", true),
     HIVECONVERTJOINNOCONDITIONALTASK("hive.auto.convert.join.noconditionaltask", true),
     HIVECONVERTJOINNOCONDITIONALTASKTHRESHOLD("hive.auto.convert.join.noconditionaltask.size",
         10000000L),
-    HIVEOPTIMIZEMAPJOINFOLLOWEDBYMR("hive.optimize.mapjoin.mapreduce", false),
     HIVESKEWJOINKEY("hive.skewjoin.key", 100000),
     HIVESKEWJOINMAPJOINNUMMAPTASK("hive.skewjoin.mapjoin.map.tasks", 10000),
     HIVESKEWJOINMAPJOINMINSPLIT("hive.skewjoin.mapjoin.min.split", 33554432L), //32M
@@ -569,6 +580,7 @@ public class HiveConf extends Configuration {
     // It creates sub-directories in the final output, so should not be turned on in systems
     // where MAPREDUCE-1501 is not present
     HIVE_OPTIMIZE_UNION_REMOVE("hive.optimize.union.remove", false),
+    HIVEOPTCORRELATION("hive.optimize.correlation", false), // exploit intra-query correlations
 
     // whether hadoop map-reduce supports sub-directories. It was added by MAPREDUCE-1501.
     // Some optimizations can only be performed if the version of hadoop being used supports
@@ -724,6 +736,7 @@ public class HiveConf extends Configuration {
 
     HIVE_SERVER2_THRIFT_PORT("hive.server2.thrift.port", 10000),
     HIVE_SERVER2_THRIFT_BIND_HOST("hive.server2.thrift.bind.host", ""),
+    HIVE_SERVER2_THRIFT_SASL_QOP("hive.server2.thrift.sasl.qop", "auth"),
 
 
     // HiveServer2 auth configuration
@@ -735,6 +748,7 @@ public class HiveConf extends Configuration {
     HIVE_SERVER2_PLAIN_LDAP_DOMAIN("hive.server2.authentication.ldap.Domain", null),
     HIVE_SERVER2_CUSTOM_AUTHENTICATION_CLASS("hive.server2.custom.authentication.class", null),
     HIVE_SERVER2_ENABLE_DOAS("hive.server2.enable.doAs", true),
+    HIVE_SERVER2_TABLE_TYPE_MAPPING("hive.server2.table.type.mapping", "HIVE"),
 
     HIVE_CONF_RESTRICTED_LIST("hive.conf.restricted.list", null),
 

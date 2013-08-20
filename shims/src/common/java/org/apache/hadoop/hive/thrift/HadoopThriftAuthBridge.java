@@ -20,12 +20,14 @@
 
  import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 import org.apache.thrift.transport.TTransportFactory;
+
  /**
   * This class is only overridden by the secure hadoop shim. It allows
   * the Thrift SASL support to bridge to Hadoop's UserGroupInformation
@@ -49,6 +51,18 @@ import org.apache.thrift.transport.TTransportFactory;
    }
 
 
+  /**
+   * Read and return Hadoop SASL configuration which can be configured using
+   * "hadoop.rpc.protection"
+   *
+   * @param conf
+   * @return Hadoop SASL configuration
+   */
+   public Map<String, String> getHadoopSaslProperties(Configuration conf) {
+     throw new UnsupportedOperationException(
+       "The current version of Hadoop does not support Authentication");
+   }
+
    public static abstract class Client {
    /**
     *
@@ -64,18 +78,20 @@ import org.apache.thrift.transport.TTransportFactory;
     * @throws IOException
     */
      public abstract TTransport createClientTransport(
-       String principalConfig, String host,
-       String methodStr,String tokenStrForm, TTransport underlyingTransport)
-       throws IOException;
+             String principalConfig, String host,
+             String methodStr, String tokenStrForm, TTransport underlyingTransport,
+             Map<String, String> saslProps)
+             throws IOException;
    }
 
    public static abstract class Server {
-     public abstract TTransportFactory createTransportFactory() throws TTransportException;
+     public abstract TTransportFactory createTransportFactory(Map<String, String> saslProps) throws TTransportException;
      public abstract TProcessor wrapProcessor(TProcessor processor);
      public abstract TProcessor wrapNonAssumingProcessor(TProcessor processor);
      public abstract InetAddress getRemoteAddress();
+     public abstract void startDelegationTokenSecretManager(Configuration conf,
+       Object hmsHandler) throws IOException;
      public abstract String getRemoteUser();
-     public abstract void startDelegationTokenSecretManager(Configuration conf) throws IOException;
      public abstract String getDelegationToken(String owner, String renewer) 
      throws IOException, InterruptedException;
      public abstract long renewDelegationToken(String tokenStrForm) throws IOException;

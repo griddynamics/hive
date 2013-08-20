@@ -79,6 +79,7 @@ public class ParseContext {
   private HashMap<TableScanOperator, Table> topToTable;
   private Map<FileSinkOperator, Table> fsopToTable;
   private List<ReduceSinkOperator> reduceSinkOperatorsAddedByEnforceBucketingSorting;
+  private HashMap<TableScanOperator, Map<String, String>> topToProps;
   private HashMap<String, SplitSample> nameToSplitSample;
   private List<LoadTableDesc> loadTableWork;
   private List<LoadFileDesc> loadFileWork;
@@ -98,15 +99,6 @@ public class ParseContext {
    * The lineage information.
    */
   private LineageInfo lInfo;
-
-  // is set to true if the expression only contains partitioning columns and not
-  // any other column reference.
-  // This is used to optimize select * from table where ... scenario, when the
-  // where condition only references
-  // partitioning columns - the partitions are identified and streamed directly
-  // to the client without requiring
-  // a map-reduce job
-  private boolean hasNonPartCols;
 
   private GlobalLimitCtx globalLimitCtx;
 
@@ -170,6 +162,7 @@ public class ParseContext {
       Map<JoinOperator, QBJoinTree> joinContext,
       Map<SMBMapJoinOperator, QBJoinTree> smbMapJoinContext,
       HashMap<TableScanOperator, Table> topToTable,
+      HashMap<TableScanOperator, Map<String, String>> topToProps,
       Map<FileSinkOperator, Table> fsopToTable,
       List<LoadTableDesc> loadTableWork, List<LoadFileDesc> loadFileWork,
       Context ctx, HashMap<String, String> idToTableNameMap, int destTableId,
@@ -193,6 +186,7 @@ public class ParseContext {
     this.smbMapJoinContext = smbMapJoinContext;
     this.topToTable = topToTable;
     this.fsopToTable = fsopToTable;
+    this.topToProps = topToProps;
     this.loadFileWork = loadFileWork;
     this.loadTableWork = loadTableWork;
     this.opParseCtx = opParseCtx;
@@ -203,7 +197,6 @@ public class ParseContext {
     this.destTableId = destTableId;
     this.uCtx = uCtx;
     this.listMapJoinOpsNoReducer = listMapJoinOpsNoReducer;
-    hasNonPartCols = false;
     this.groupOpToInputTables = groupOpToInputTables;
     this.prunedPartitions = prunedPartitions;
     this.opToSamplePruner = opToSamplePruner;
@@ -336,6 +329,21 @@ public class ParseContext {
   }
 
   /**
+   * @return the topToProps
+   */
+  public HashMap<TableScanOperator, Map<String, String>> getTopToProps() {
+    return topToProps;
+  }
+
+  /**
+   * @param topToProps
+   *          the topToProps to set
+   */
+  public void setTopToProps(HashMap<TableScanOperator, Map<String, String>> topToProps) {
+    this.topToProps = topToProps;
+  }
+
+  /**
    * @return the topOps
    */
   public HashMap<String, Operator<? extends OperatorDesc>> getTopOps() {
@@ -371,6 +379,27 @@ public class ParseContext {
    */
   public LinkedHashMap<Operator<? extends OperatorDesc>, OpParseContext> getOpParseCtx() {
     return opParseCtx;
+  }
+
+  /**
+   * Remove the OpParseContext of a specific operator op
+   * @param op
+   * @return
+   */
+  public OpParseContext removeOpParseCtx(Operator<? extends OperatorDesc> op) {
+    return opParseCtx.remove(op);
+  }
+
+  /**
+   * Update the OpParseContext of operator op to newOpParseContext.
+   * If op is not in opParseCtx, a new entry will be added into opParseCtx.
+   * The key is op, and the value is newOpParseContext.
+   * @param op
+   * @param newOpParseContext
+   */
+  public void updateOpParseCtx(Operator<? extends OperatorDesc> op,
+      OpParseContext newOpParseContext) {
+    opParseCtx.put(op, newOpParseContext);
   }
 
   /**
@@ -473,22 +502,6 @@ public class ParseContext {
   public void setListMapJoinOpsNoReducer(
       List<AbstractMapJoinOperator<? extends MapJoinDesc>> listMapJoinOpsNoReducer) {
     this.listMapJoinOpsNoReducer = listMapJoinOpsNoReducer;
-  }
-
-  /**
-   * Sets the hasNonPartCols flag.
-   *
-   * @param val
-   */
-  public void setHasNonPartCols(boolean val) {
-    hasNonPartCols = val;
-  }
-
-  /**
-   * Gets the value of the hasNonPartCols flag.
-   */
-  public boolean getHasNonPartCols() {
-    return hasNonPartCols;
   }
 
   /**
@@ -601,8 +614,7 @@ public class ParseContext {
       throws HiveException {
     PrunedPartitionList partsList = opToPartList.get(ts);
     if (partsList == null) {
-      partsList = PartitionPruner.prune(topToTable.get(ts),
-          opToPartPruner.get(ts), conf, alias, prunedPartitions);
+      partsList = PartitionPruner.prune(ts, this, alias);
       opToPartList.put(ts, partsList);
     }
     return partsList;

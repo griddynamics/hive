@@ -150,7 +150,7 @@
  in the current visibility scope." unless="clover.ok"/>
   </target>
   
-	  <target name="test-lightweight" >
+  <target name="test-lightweight" >
       <sequential>
         <delete dir="${test.tmp.dir}" />
         <delete dir="${test.data.dir}" />
@@ -167,6 +167,7 @@
                   <path refid="test.class.path"/>
                   <pathelement path="${clover.jar}"/>
               </classpath>
+              <jvmarg line="${junit.jvm.args}"/>
               <formatter type="${test.junit.output.format}" />
               <!-- If the user has not defined a particular test to run, run them all -->
               <batchtest fork="yes" todir="${test.log.dir}" unless="testcase">

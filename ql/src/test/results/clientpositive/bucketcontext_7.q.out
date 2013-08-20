@@ -105,6 +105,99 @@ STAGE PLANS:
         a 
           Fetch Operator
             limit: -1
+            Partition Description:
+                Partition
+                  input format: org.apache.hadoop.mapred.TextInputFormat
+                  output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                  partition values:
+                    ds 2008-04-08
+                  properties:
+                    bucket_count 4
+                    bucket_field_name key
+                    columns key,value
+                    columns.types string:string
+#### A masked pattern was here ####
+                    name default.bucket_small
+                    numFiles 4
+                    numRows 0
+                    partition_columns ds
+                    rawDataSize 0
+                    serialization.ddl struct bucket_small { string key, string value}
+                    serialization.format 1
+                    serialization.lib org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                    totalSize 5812
+#### A masked pattern was here ####
+                  serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                    properties:
+                      SORTBUCKETCOLSPREFIX TRUE
+                      bucket_count 4
+                      bucket_field_name key
+                      columns key,value
+                      columns.types string:string
+#### A masked pattern was here ####
+                      name default.bucket_small
+                      numFiles 8
+                      numPartitions 2
+                      numRows 0
+                      partition_columns ds
+                      rawDataSize 0
+                      serialization.ddl struct bucket_small { string key, string value}
+                      serialization.format 1
+                      serialization.lib org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                      totalSize 11624
+#### A masked pattern was here ####
+                    serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                    name: default.bucket_small
+                  name: default.bucket_small
+                Partition
+                  input format: org.apache.hadoop.mapred.TextInputFormat
+                  output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                  partition values:
+                    ds 2008-04-09
+                  properties:
+                    bucket_count 4
+                    bucket_field_name key
+                    columns key,value
+                    columns.types string:string
+#### A masked pattern was here ####
+                    name default.bucket_small
+                    numFiles 4
+                    numRows 0
+                    partition_columns ds
+                    rawDataSize 0
+                    serialization.ddl struct bucket_small { string key, string value}
+                    serialization.format 1
+                    serialization.lib org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                    totalSize 5812
+#### A masked pattern was here ####
+                  serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                    properties:
+                      SORTBUCKETCOLSPREFIX TRUE
+                      bucket_count 4
+                      bucket_field_name key
+                      columns key,value
+                      columns.types string:string
+#### A masked pattern was here ####
+                      name default.bucket_small
+                      numFiles 8
+                      numPartitions 2
+                      numRows 0
+                      partition_columns ds
+                      rawDataSize 0
+                      serialization.ddl struct bucket_small { string key, string value}
+                      serialization.format 1
+                      serialization.lib org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                      totalSize 11624
+#### A masked pattern was here ####
+                    serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                    name: default.bucket_small
+                  name: default.bucket_small
       Alias -> Map Local Operator Tree:
         a 
           TableScan
@@ -161,7 +254,6 @@ STAGE PLANS:
                           type: bigint
       Local Work:
         Map Reduce Local Work
-      Needs Tagging: false
       Path -> Alias:
 #### A masked pattern was here ####
       Path -> Partition:
@@ -261,6 +353,10 @@ STAGE PLANS:
               serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
               name: default.bucket_big
             name: default.bucket_big
+      Truncated Path -> Alias:
+        /bucket_big/ds=2008-04-08 [b]
+        /bucket_big/ds=2008-04-09 [b]
+      Needs Tagging: false
       Reduce Operator Tree:
         Group By Operator
           aggregations:
@@ -291,9 +387,6 @@ STAGE PLANS:
               TotalFiles: 1
               GatherStats: false
               MultiFileSpray: false
-      Truncated Path -> Alias:
-        /bucket_big/ds=2008-04-08 [b]
-        /bucket_big/ds=2008-04-09 [b]
 
   Stage: Stage-0
     Fetch Operator
@@ -362,7 +455,6 @@ STAGE PLANS:
                     value expressions:
                           expr: _col0
                           type: bigint
-      Needs Tagging: false
       Path -> Alias:
 #### A masked pattern was here ####
       Path -> Partition:
@@ -462,6 +554,10 @@ STAGE PLANS:
               serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
               name: default.bucket_big
             name: default.bucket_big
+      Truncated Path -> Alias:
+        /bucket_big/ds=2008-04-08 [b]
+        /bucket_big/ds=2008-04-09 [b]
+      Needs Tagging: false
       Reduce Operator Tree:
         Group By Operator
           aggregations:
@@ -492,9 +588,6 @@ STAGE PLANS:
               TotalFiles: 1
               GatherStats: false
               MultiFileSpray: false
-      Truncated Path -> Alias:
-        /bucket_big/ds=2008-04-08 [b]
-        /bucket_big/ds=2008-04-09 [b]
 
   Stage: Stage-0
     Fetch Operator

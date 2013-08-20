@@ -90,6 +90,7 @@ public class GenericUDAFPercentileApprox extends AbstractGenericUDAFResolver {
     case TIMESTAMP:
     case DECIMAL:
       break;
+    case DATE:
     default:
       throw new UDFArgumentTypeException(0,
           "Only numeric type arguments are accepted but "
@@ -291,7 +292,7 @@ public class GenericUDAFPercentileApprox extends AbstractGenericUDAFResolver {
     protected Integer nbins = 10000;
 
     // For PARTIAL2 and FINAL: ObjectInspectors for partial aggregations (list of doubles)
-    protected StandardListObjectInspector loi;
+    protected transient StandardListObjectInspector loi;
 
     @Override
     public void merge(AggregationBuffer agg, Object partial) throws HiveException {

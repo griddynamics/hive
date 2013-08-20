@@ -19,6 +19,7 @@ package org.apache.hadoop.hive.ql.exec.mr;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.lang.management.ManagementFactory;
@@ -47,13 +48,13 @@ import org.apache.hadoop.hive.ql.exec.BucketMatcher;
 import org.apache.hadoop.hive.ql.exec.FetchOperator;
 import org.apache.hadoop.hive.ql.exec.HashTableSinkOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
+import org.apache.hadoop.hive.ql.exec.SecureCmdDoAs;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.exec.Utilities.StreamPrinter;
-import org.apache.hadoop.hive.ql.exec.persistence.AbstractMapJoinKey;
-import org.apache.hadoop.hive.ql.exec.persistence.HashMapWrapper;
-import org.apache.hadoop.hive.ql.exec.persistence.MapJoinObjectValue;
+import org.apache.hadoop.hive.ql.exec.mapjoin.MapJoinMemoryExhaustionException;
+import org.apache.hadoop.hive.ql.exec.persistence.MapJoinTableContainerSerDe;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.BucketMapJoinContext;
 import org.apache.hadoop.hive.ql.plan.FetchWork;
@@ -70,13 +71,12 @@ import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.ReflectionUtils;
 
-
 /**
  * MapredLocalTask represents any local work (i.e.: client side work) that hive needs to
  * execute. E.g.: This is used for generating Hashtables for Mapjoins on the client
  * before the Join is executed on the cluster.
- * 
- * MapRedLocalTask does not actually execute the work in process, but rather generates 
+ *
+ * MapRedLocalTask does not actually execute the work in process, but rather generates
  * a command using ExecDriver. ExecDriver is what will finally drive processing the records.
  */
 public class MapredLocalTask extends Task<MapredLocalWork> implements Serializable {
@@ -141,7 +141,7 @@ public class MapredLocalTask extends Task<MapredLocalWork> implements Serializab
       OutputStream out = FileSystem.getLocal(conf).create(planPath);
       MapredLocalWork plan = getWork();
       LOG.info("Generating plan file " + planPath.toString());
-      Utilities.serializeMapRedLocalWork(plan, out);
+      Utilities.serializeObject(plan, out);
 
       String isSilent = "true".equalsIgnoreCase(System.getProperty("test.silent")) ? "-nolog" : "";
 
@@ -173,8 +173,6 @@ public class MapredLocalTask extends Task<MapredLocalWork> implements Serializab
           }
         }
       }
-
-      LOG.info("Executing: " + cmdLine);
 
       // Inherit Java system variables
       String hadoopOpts;
@@ -231,13 +229,28 @@ public class MapredLocalTask extends Task<MapredLocalWork> implements Serializab
         MapRedTask.configureDebugVariablesForChildJVM(variables);
       }
 
+
+      if(ShimLoader.getHadoopShims().isSecurityEnabled() &&
+          conf.getBoolVar(HiveConf.ConfVars.HIVE_SERVER2_ENABLE_DOAS) == true
+          ){
+        //If kerberos security is enabled, and HS2 doAs is enabled,
+        // then additional params need to be set so that the command is run as
+        // intended user
+        SecureCmdDoAs secureDoAs = new SecureCmdDoAs(conf);
+        cmdLine = secureDoAs.addArg(cmdLine);
+        secureDoAs.addEnv(variables);
+      }
+
       env = new String[variables.size()];
       int pos = 0;
       for (Map.Entry<String, String> entry : variables.entrySet()) {
         String name = entry.getKey();
         String value = entry.getValue();
         env[pos++] = name + "=" + value;
+        LOG.debug("Setting env: " + env[pos-1]);
       }
+
+      LOG.info("Executing: " + cmdLine);
 
       // Run ExecDriver in another JVM
       executor = Runtime.getRuntime().exec(cmdLine, env, new File(workDir));
@@ -306,14 +319,13 @@ public class MapredLocalTask extends Task<MapredLocalWork> implements Serializab
       long elapsed = currentTime - startTime;
       console.printInfo(Utilities.now() + "\tEnd of local task; Time Taken: "
           + Utilities.showTime(elapsed) + " sec.");
-    } catch (Throwable e) {
-      if (e instanceof OutOfMemoryError
-          || (e instanceof HiveException && e.getMessage().equals("RunOutOfMeomoryUsage"))) {
-        // Don't create a new object if we are already out of memory
+    } catch (Throwable throwable) {
+      if (throwable instanceof OutOfMemoryError
+          || (throwable instanceof MapJoinMemoryExhaustionException)) {
+        l4j.error("Hive Runtime Error: Map local work exhausted memory", throwable);
         return 3;
       } else {
-        l4j.error("Hive Runtime Error: Map local work failed");
-        e.printStackTrace();
+        l4j.error("Hive Runtime Error: Map local work failed", throwable);
         return 2;
       }
     }
@@ -323,7 +335,6 @@ public class MapredLocalTask extends Task<MapredLocalWork> implements Serializab
   private void startForward(boolean inputFileChangeSenstive, String bigTableBucket)
       throws Exception {
     for (Map.Entry<String, FetchOperator> entry : fetchOperators.entrySet()) {
-      int fetchOpRows = 0;
       String alias = entry.getKey();
       FetchOperator fetchOp = entry.getValue();
 
@@ -351,7 +362,6 @@ public class MapredLocalTask extends Task<MapredLocalWork> implements Serializab
           forwardOp.close(false);
           break;
         }
-        fetchOpRows++;
         forwardOp.process(row.o, 0);
         // check if any operator had a fatal error or early exit during
         // execution
@@ -412,7 +422,8 @@ public class MapredLocalTask extends Task<MapredLocalWork> implements Serializab
     }
   }
 
-  private void generateDummyHashTable(String alias, String bigBucketFileName) throws HiveException,IOException {
+  private void generateDummyHashTable(String alias, String bigBucketFileName)
+      throws HiveException,IOException {
     // find the (byte)tag for the map join(HashTableSinkOperator)
     Operator<? extends OperatorDesc> parentOp = work.getAliasToWork().get(alias);
     Operator<? extends OperatorDesc> childOp = parentOp.getChildOperators().get(0);
@@ -429,8 +440,6 @@ public class MapredLocalTask extends Task<MapredLocalWork> implements Serializab
 
     // generate empty hashtable for this (byte)tag
     String tmpURI = this.getWork().getTmpFileURI();
-    HashMapWrapper<AbstractMapJoinKey, MapJoinObjectValue> hashTable =
-      new HashMapWrapper<AbstractMapJoinKey, MapJoinObjectValue>();
 
     String fileName = work.getBucketFileName(bigBucketFileName);
 
@@ -440,12 +449,14 @@ public class MapredLocalTask extends Task<MapredLocalWork> implements Serializab
     console.printInfo(Utilities.now() + "\tDump the hashtable into file: " + tmpURIPath);
     Path path = new Path(tmpURIPath);
     FileSystem fs = path.getFileSystem(job);
-    File file = new File(path.toUri().getPath());
-    fs.create(path);
-    long fileLength = hashTable.flushMemoryCacheToPersistent(file);
+    ObjectOutputStream out = new ObjectOutputStream(fs.create(path));
+    try {
+      MapJoinTableContainerSerDe.persistDummyTable(out);
+    } finally {
+      out.close();
+    }
     console.printInfo(Utilities.now() + "\tUpload 1 File to: " + tmpURIPath + " File size: "
-        + fileLength);
-    hashTable.close();
+        + fs.getFileStatus(path).getLen());
   }
 
   private void setUpFetchOpContext(FetchOperator fetchOp, String alias, String currentInputFile)

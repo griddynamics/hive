@@ -85,6 +85,7 @@ public class GenericUDAFHistogramNumeric extends AbstractGenericUDAFResolver {
       break;
     case STRING:
     case BOOLEAN:
+    case DATE:
     default:
       throw new UDFArgumentTypeException(0,
           "Only numeric type arguments are accepted but "
@@ -120,10 +121,10 @@ public class GenericUDAFHistogramNumeric extends AbstractGenericUDAFResolver {
 
     // For PARTIAL1 and COMPLETE: ObjectInspectors for original data
     private PrimitiveObjectInspector inputOI;
-    private PrimitiveObjectInspector nbinsOI;
+    private transient PrimitiveObjectInspector nbinsOI;
 
     // For PARTIAL2 and FINAL: ObjectInspectors for partial aggregations (list of doubles)
-    private StandardListObjectInspector loi;
+    private transient StandardListObjectInspector loi;
 
 
     @Override

@@ -56,17 +56,17 @@ public abstract class GenericUDFBaseCompare extends GenericUDF {
   protected String opName;
   protected String opDisplayName;
 
-  protected ObjectInspector[] argumentOIs;
+  protected transient ObjectInspector[] argumentOIs;
 
-  protected ReturnObjectInspectorResolver conversionHelper = null;
+  protected transient ReturnObjectInspectorResolver conversionHelper = null;
   protected ObjectInspector compareOI;
   protected CompareType compareType;
-  protected Converter converter0, converter1;
-  protected StringObjectInspector soi0, soi1;
-  protected IntObjectInspector ioi0, ioi1;
-  protected LongObjectInspector loi0, loi1;
-  protected ByteObjectInspector byoi0, byoi1;
-  protected BooleanObjectInspector boi0,boi1;
+  protected transient Converter converter0, converter1;
+  protected transient StringObjectInspector soi0, soi1;
+  protected transient IntObjectInspector ioi0, ioi1;
+  protected transient LongObjectInspector loi0, loi1;
+  protected transient ByteObjectInspector byoi0, byoi1;
+  protected transient BooleanObjectInspector boi0,boi1;
   protected final BooleanWritable result = new BooleanWritable();
 
   @Override
@@ -136,10 +136,18 @@ public abstract class GenericUDFBaseCompare extends GenericUDF {
       if (oiTypeInfo0 != oiTypeInfo1) {
         compareType = CompareType.NEED_CONVERT;
 
-        // If either argument is a string, we convert to a double because a number
-        // in string form should always be convertible into a double
-        if (oiTypeInfo0.equals(TypeInfoFactory.stringTypeInfo)
+        if ((oiTypeInfo0.equals(TypeInfoFactory.stringTypeInfo)
+                && oiTypeInfo1.equals(TypeInfoFactory.dateTypeInfo))
+            || (oiTypeInfo0.equals(TypeInfoFactory.dateTypeInfo)
+                && oiTypeInfo1.equals(TypeInfoFactory.stringTypeInfo))) {
+          // Date should be comparable with string
+          compareOI = TypeInfoUtils.getStandardWritableObjectInspectorFromTypeInfo(
+              TypeInfoFactory.stringTypeInfo);
+
+        } else if (oiTypeInfo0.equals(TypeInfoFactory.stringTypeInfo)
             || oiTypeInfo1.equals(TypeInfoFactory.stringTypeInfo)) {
+          // If either argument is a string, we convert to a double because a number
+          // in string form should always be convertible into a double
           compareOI = TypeInfoUtils.getStandardWritableObjectInspectorFromTypeInfo(
               TypeInfoFactory.doubleTypeInfo);
         } else {
