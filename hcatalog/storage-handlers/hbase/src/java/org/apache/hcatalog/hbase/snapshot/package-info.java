@@ -16,15 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-namespace java org.apache.hcatalog.hbase.snapshot.transaction.thrift
-namespace cpp Apache.HCatalog.HBase
-
-struct StoreFamilyRevision {
-  1: i64 revision,
-  2: i64 timestamp
-}
-
-struct StoreFamilyRevisionList {
-  1: list<StoreFamilyRevision> revisionList
-}
+/**
+ * Provides a revision manager for data stored in HBase that can be used to implement repeatable reads.
+ * The component is designed to be usable for revision management of data stored in HBase in general,
+ * independent and not limited to HCatalog. It is used by the HCatalog HBase storage handler, implementation depends on HBase 0.92+.
+ * <p>
+ * For more information please see 
+ * <a href="https://cwiki.apache.org/confluence/display/HCATALOG/Snapshots+and+Repeatable+reads+for+HBase+Tables">Snapshots and Repeatable reads for HBase Tables</a>.
+ * @since 0.4
+ */
+package org.apache.hcatalog.hbase.snapshot;
