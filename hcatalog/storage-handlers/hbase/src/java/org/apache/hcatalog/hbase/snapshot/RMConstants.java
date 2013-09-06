@@ -17,14 +17,14 @@
  * under the License.
  */
 
-namespace java org.apache.hcatalog.hbase.snapshot.transaction.thrift
-namespace cpp Apache.HCatalog.HBase
+package org.apache.hcatalog.hbase.snapshot;
 
-struct StoreFamilyRevision {
-  1: i64 revision,
-  2: i64 timestamp
-}
+public class RMConstants {
+    public static final String REVISION_MGR_ENDPOINT_IMPL_CLASS = "revision.manager.endpoint.impl.class";
 
-struct StoreFamilyRevisionList {
-  1: list<StoreFamilyRevision> revisionList
+    public static final String WRITE_TRANSACTION_TIMEOUT = "revision.manager.writeTxn.timeout";
+
+    public static final String ZOOKEEPER_HOSTLIST = "revision.manager.zk.hostList";
+
+    public static final String ZOOKEEPER_DATADIR = "revision.manager.zk.dataDir";
 }
