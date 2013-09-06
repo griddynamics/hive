@@ -17,14 +17,18 @@
  * under the License.
  */
 
-namespace java org.apache.hcatalog.hbase.snapshot.transaction.thrift
-namespace cpp Apache.HCatalog.HBase
+package org.apache.hcatalog.hbase.snapshot;
 
-struct StoreFamilyRevision {
-  1: i64 revision,
-  2: i64 timestamp
-}
+import org.apache.hadoop.conf.Configuration;
+import org.junit.Assert;
+import org.junit.Test;
 
-struct StoreFamilyRevisionList {
-  1: list<StoreFamilyRevision> revisionList
+public class TestRevisionManagerConfiguration {
+
+    @Test
+    public void testDefault() {
+        Configuration conf = RevisionManagerConfiguration.create();
+        Assert.assertEquals("org.apache.hcatalog.hbase.snapshot.ZKBasedRevisionManager",
+            conf.get(RevisionManagerFactory.REVISION_MGR_IMPL_CLASS));
+    }
 }

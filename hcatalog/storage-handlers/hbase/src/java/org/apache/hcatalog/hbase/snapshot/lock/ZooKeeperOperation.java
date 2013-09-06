@@ -17,14 +17,25 @@
  * under the License.
  */
 
-namespace java org.apache.hcatalog.hbase.snapshot.transaction.thrift
-namespace cpp Apache.HCatalog.HBase
+package org.apache.hcatalog.hbase.snapshot.lock;
 
-struct StoreFamilyRevision {
-  1: i64 revision,
-  2: i64 timestamp
-}
+import org.apache.zookeeper.KeeperException;
 
-struct StoreFamilyRevisionList {
-  1: list<StoreFamilyRevision> revisionList
+/**
+ * A callback object which can be used for implementing retry-able operations in the
+ * {@link org.apache.hcatalog.hbase.snapshot.lock.ProtocolSupport} class
+ *  This class has been used as-is from the zookeeper 3.4.0 with change in the
+ *  package name .
+ */
+public interface ZooKeeperOperation {
+
+    /**
+     * Performs the operation - which may be involved multiple times if the connection
+     * to ZooKeeper closes during this operation
+     *
+     * @return the result of the operation or null
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+    public boolean execute() throws KeeperException, InterruptedException;
 }

@@ -17,14 +17,25 @@
  * under the License.
  */
 
-namespace java org.apache.hcatalog.hbase.snapshot.transaction.thrift
-namespace cpp Apache.HCatalog.HBase
+package org.apache.hcatalog.hbase.snapshot.lock;
 
-struct StoreFamilyRevision {
-  1: i64 revision,
-  2: i64 timestamp
-}
+/**
+ * This class has two methods which are call
+ * back methods when a lock is acquired and
+ * when the lock is released.
+ *  This class has been used as-is from the zookeeper 3.3.4 recipes minor changes
+ *  in the package name.
+ */
+public interface LockListener {
+    /**
+     * call back called when the lock
+     * is acquired
+     */
+    public void lockAcquired();
 
-struct StoreFamilyRevisionList {
-  1: list<StoreFamilyRevision> revisionList
+    /**
+     * call back called when the lock is
+     * released.
+     */
+    public void lockReleased();
 }
