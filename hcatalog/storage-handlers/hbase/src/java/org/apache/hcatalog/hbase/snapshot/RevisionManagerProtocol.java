@@ -16,15 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.hcatalog.hbase.snapshot;
 
-namespace java org.apache.hcatalog.hbase.snapshot.transaction.thrift
-namespace cpp Apache.HCatalog.HBase
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 
-struct StoreFamilyRevision {
-  1: i64 revision,
-  2: i64 timestamp
-}
+/**
+ * Interface marker to implement RevisionManager as Coprocessor.
+ * (needs to extend CoprocessorProtocol)
+ */
+public interface RevisionManagerProtocol extends RevisionManager,
+    CoprocessorProtocol {
 
-struct StoreFamilyRevisionList {
-  1: list<StoreFamilyRevision> revisionList
 }
