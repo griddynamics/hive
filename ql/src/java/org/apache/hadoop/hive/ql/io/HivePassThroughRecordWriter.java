@@ -15,32 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hive.serde2.objectinspector.primitive;
 
-import org.apache.hadoop.hive.serde2.objectinspector.ConstantObjectInspector;
+package org.apache.hadoop.hive.ql.io;
 
-import org.apache.hadoop.hive.serde2.io.ByteWritable;
+import java.io.IOException;
 
-/**
- * A WritableConstantByteObjectInspector is a WritableByteObjectInspector
- * that implements ConstantObjectInspector.
- */
-public class WritableConstantByteObjectInspector extends
-    WritableByteObjectInspector implements
-    ConstantObjectInspector {
+import org.apache.hadoop.hive.ql.exec.FileSinkOperator.RecordWriter;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
-  private ByteWritable value;
 
-  protected WritableConstantByteObjectInspector() {
-    super();
-  }
-  WritableConstantByteObjectInspector(ByteWritable value) {
-    super();
-    this.value = value;
+public class HivePassThroughRecordWriter <K extends WritableComparable<?>, V extends Writable>
+implements RecordWriter {
+
+  private final org.apache.hadoop.mapred.RecordWriter<K, V> mWriter;
+
+  public HivePassThroughRecordWriter(org.apache.hadoop.mapred.RecordWriter<K, V> writer) {
+    this.mWriter = writer;
   }
 
-  @Override
-  public ByteWritable getWritableConstantValue() {
-    return value;
+  @SuppressWarnings("unchecked")
+  public void write(Writable r) throws IOException {
+    mWriter.write(null, (V) r);
+  }
+
+  public void close(boolean abort) throws IOException {
+    //close with null reporter
+    mWriter.close(null);
   }
 }
+
